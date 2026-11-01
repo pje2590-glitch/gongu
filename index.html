@@ -1,0 +1,1278 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>html{color-scheme:light dark}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>직구 공구 정산서</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;600&family=Nanum+Gothic:wght@400;700&family=Gothic+A1:wght@400;700&family=Sunflower:wght@500;700&family=Jua&family=Do+Hyeon&family=Gaegu:wght@400;700&family=Black+Han+Sans&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+/* Layout: 공구 칩 → PC는 [내 화면 | 참여자 화면] 두 칸, 폰은 토글. 각 칸은 탭. 색은 민트 바탕·흰 카드·초록(확인/강조)·빨강(조치 필요)·네이비(운송장) 넷만 */
+:root{
+  --bg:#E3EDED; --card:#FFFFFF; --ink:#22303A; --muted:#7F8B92; --line:#E2EAEA; --soft:#EEF2F2;
+  --ok:#3E8E1E; --ok-bg:#EEF8E3; --ok-strong:#5DB32A;
+  --bad:#C9413E; --bad-bg:#FBEAEA;
+  --navy:#1C2531; --navy-ink:#FFFFFF;
+  --cvs-bg:#FFF4CC; --cvs:#8A6300; --visit-bg:#E2EEFA; --visit:#2F5F9E;
+  --body:"Gowun Dodum",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --title:"Gaegu","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#151D1D; --card:#1F2929; --ink:#ECF2F1; --muted:#95A2A2; --line:#2E3B3B; --soft:#283232;
+  --ok:#9ADB70; --ok-bg:#243A18; --ok-strong:#7CCB4A; --bad:#F09490; --bad-bg:#3D2424; --navy:#0E151C; --navy-ink:#F4F7FA; --cvs-bg:#3D3415; --cvs:#F2D479; --visit-bg:#1E2F44; --visit:#9CC4F0; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#151D1D; --card:#1F2929; --ink:#ECF2F1; --muted:#95A2A2; --line:#2E3B3B; --soft:#283232;
+  --ok:#9ADB70; --ok-bg:#243A18; --ok-strong:#7CCB4A; --bad:#F09490; --bad-bg:#3D2424; --navy:#0E151C; --navy-ink:#F4F7FA; --cvs-bg:#3D3415; --cvs:#F2D479; --visit-bg:#1E2F44; --visit:#9CC4F0; color-scheme:dark }
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+h1,h2,h3{margin:0;text-wrap:balance}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:5px;padding:8px 11px;width:100%;min-width:0}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--ok-strong);outline-offset:1px}
+textarea{resize:vertical}
+.num{font-variant-numeric:tabular-nums}
+a{color:var(--ok)}
+.t{font-family:var(--title);font-weight:400}
+
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.brand{font-family:var(--title);font-size:26px;line-height:1.1;color:var(--ink)}
+.brand small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);margin-top:2px}
+.seg{display:flex;background:var(--soft);border-radius:6px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:6px 16px;border-radius:6px;font-weight:700;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 13px;border-radius:6px;font-weight:700;font-size:14px}
+.chips button[aria-pressed="true"]{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.chips .add{color:var(--ok);border-style:dashed}
+.chips .past{width:100%;padding:6px 0 0;border-top:1px dashed var(--line);margin-top:2px}
+.chips .past button{color:var(--muted);font-weight:400}
+
+.cols{display:grid;grid-template-columns:1fr;gap:14px;align-items:start}
+.panel{display:flex;flex-direction:column;gap:12px;min-width:0}
+.eyebrow{display:none;font-size:13px;font-weight:700;background:var(--ink);color:var(--card);border-radius:6px;padding:5px 14px;width:max-content}
+.eyebrow.light{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+/* 참여자 화면: 폰 기준 콤팩트 */
+.mv{gap:8px}
+.mv .card{padding:12px 14px;border-radius:12px}
+.mv .card h2{font-size:17px;margin-bottom:6px}
+.mv .receipt{padding:14px 14px 22px;border-radius:12px}
+.mv .receipt .shop{font-size:22px}
+.mv .receipt .date{font-size:12px;margin-bottom:6px}
+.mv .receipt .greet{font-size:13px;padding-bottom:8px;margin-bottom:8px}
+.mv .stage .hd b{font-size:15px}
+.mv .line{font-size:13px;padding:2px 0}
+.mv .line.total{font-size:14px}
+.mv .grand{padding:8px 12px;margin-top:8px;font-size:14px}
+.mv .grand span:last-child{font-size:18px}
+.mv .acctbox{padding:10px 12px;gap:6px;margin-top:8px}
+.mv .acct .n{font-size:18px}
+.mv .notice{font-size:12px;margin-top:10px;line-height:1.55}
+.mv .checks{gap:4px}
+.mv .ck{padding:6px 4px;border-radius:5px}
+.mv .ck .mark{font-size:18px}
+.mv .ck .lb{font-size:12px}
+.mv .ck .sb{font-size:10px}
+.mv .tabs button{font-size:15px;padding:6px 4px 5px}
+.mv .btn{padding:6px 10px;font-size:13px}
+.mv .band{padding:8px;font-size:13px}
+.mv .pill{font-size:12px;padding:2px 8px}
+.mv .help{font-size:12px}
+.mv .help.keep{margin-top:-2px}
+.mv .dark{padding:12px 14px}
+.mv .dark .tn{font-size:18px}
+.mv .tl li{font-size:13px;padding-bottom:10px}
+@media (max-width:959px){.formprev{display:none!important}}
+.phone{border:1px solid var(--line);border-radius:14px;padding:12px 10px;background:var(--bg);max-width:400px}
+.est{border:1.5px dashed var(--ok-strong)}
+.invite{padding:14px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.inv-frame{border:1.5px dashed var(--ok-strong);border-radius:8px;padding:22px 18px;text-align:center;background:var(--ok-bg)}
+.inv-body{position:relative}
+.inv-swans,.inv-script{display:none}
+.inv-mark{font-size:44px;line-height:1;margin-bottom:10px}
+.inv-title{font-family:var(--title);font-size:21px;line-height:1.3;text-wrap:balance;margin:0 0 10px}
+.inv-text{white-space:pre-line;font-size:14px;line-height:1.75}
+.inv-meta{margin-top:14px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;line-height:1.8;color:var(--muted)}
+.notice-card .nl{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:14px;line-height:1.5}
+.notice-card .nl:last-of-type{border-bottom:0}
+.notice-card .nl .ic{flex:0 0 22px;font-size:16px}
+.notice-card .nl b{display:block;margin-bottom:2px}
+.notice-card ul.plain{margin:0;padding-left:16px}
+.notice-card ul.rules{margin:10px 0 0;padding:10px 12px 10px 30px;background:var(--soft);border-radius:8px;font-size:13px;line-height:1.55}
+.notice-card ul.rules li{margin:3px 0}
+.notice-card ul.rules li::marker{content:'✔️ '}
+@media (min-width:960px){.cols{grid-template-columns:1fr 430px}.cols.single{grid-template-columns:1fr;max-width:600px;margin:0 auto;width:100%}.eyebrow{display:block}.seg{display:none}.col[hidden]{display:flex!important}.col.formhide{display:none!important}}
+
+.tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.tabs button{flex:1 0 auto;border:0;background:transparent;color:var(--muted);padding:8px 5px 7px;font-family:var(--title);font-size:16px;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--ok-strong)}
+.tabs button .n{font-family:var(--body);font-size:11px;background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:0 6px;margin-left:4px;vertical-align:middle}
+
+/* 공책 라벨 탭 */
+.subtabs{display:flex;flex-wrap:wrap;gap:2px;padding:0 14px;margin-bottom:-12px;position:relative;z-index:2;align-items:flex-end}
+.subtabs button{border:1px solid var(--line);border-bottom:0;background:var(--soft);color:var(--muted);padding:6px 7px 7px;border-radius:9px 9px 0 0;font-size:12px;font-weight:700;position:relative;top:0;align-self:flex-end;white-space:nowrap}
+@media (max-width:380px){.subtabs button{padding:6px 5px 7px;font-size:11.5px}.subtabs .n{padding:0 4px;margin-left:2px}}
+.subtabs button.yellow{background:var(--cvs-bg);color:var(--cvs)} .subtabs button.red{background:var(--bad-bg);color:var(--bad)} .subtabs button.blue{background:var(--visit-bg);color:var(--visit)}
+.subtabs button.blue[aria-selected="true"]{background:var(--visit-bg);color:var(--visit);border-color:var(--visit-bg)}
+.subpanel.yellow>.card:first-child{background:var(--cvs-bg)} .subpanel.red>.card:first-child{background:var(--bad-bg);border-color:var(--bad)}
+.subpanel.yellow>.card:first-child .tile,.subpanel.yellow>.card:first-child .pill:not(.ok):not(.no),.subpanel.red>.card:first-child .tile,.subpanel.yellow>.card:first-child .prow,.subpanel.yellow>.card:first-child .match,.subpanel.yellow>.card:first-child .sec,.subpanel.yellow>.card:first-child pre.msg,.subpanel.red>.card:first-child .prow{background:var(--card)}
+.subtabs button[aria-selected="true"]{background:var(--card);color:var(--ink);border-color:var(--line);z-index:3;padding-bottom:10px;margin-bottom:-3px}
+.subtabs button.yellow[aria-selected="true"]{background:var(--cvs-bg);color:var(--cvs)} .subtabs button.red[aria-selected="true"]{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.subtabs .n{font-size:11px;background:var(--bad-bg);color:var(--bad);border-radius:6px;padding:0 6px;margin-left:4px}
+.subpanel{display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.card h2{font-family:var(--title);font-size:20px;margin:0 0 10px;padding-bottom:8px;border-bottom:1px dashed var(--ok-strong)}
+.sec{font-weight:700;font-size:14px;margin:16px 0 6px;padding:6px 10px;background:var(--soft);border-radius:6px}
+.grp{border:1.5px dashed var(--line);border-radius:10px;padding:10px 12px 12px;margin-top:12px;background:var(--card)}
+.grp:first-of-type{margin-top:0}
+.grp-h{font-weight:700;font-size:14px;margin:-10px -12px 10px;padding:7px 12px;background:var(--soft);border-radius:10px 10px 0 0;border-bottom:1.5px dashed var(--line)}
+.grp.visit{background:var(--visit-bg);border-color:var(--visit)} .grp.visit .grp-h{background:rgba(255,255,255,.6);border-color:var(--visit)}
+.grp.cvs{background:var(--cvs-bg);border-color:var(--cvs)} .grp.cvs .grp-h{background:rgba(255,255,255,.6);border-color:var(--cvs)}
+.grp.visit .prow,.grp.cvs .prow{background:var(--card)}
+.subpanel.yellow>.card:first-child .grp{background:var(--card)}
+.sec:first-child{margin-top:0}
+.row.hd2{border-bottom:1px dashed var(--ok-strong);padding-bottom:8px;margin-bottom:10px}
+.pill{display:inline-flex;align-items:center;gap:4px;border-radius:6px;padding:3px 10px;font-size:13px;font-weight:700;line-height:1.4;background:var(--soft);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.no{background:var(--bad-bg);color:var(--bad)}
+
+.receipt{background:var(--card);border-radius:12px;padding:22px 22px 28px;
+  -webkit-mask:radial-gradient(circle at 10px 100%,transparent 6px,#000 6.5px) -10px 0/20px 100% repeat-x;mask:radial-gradient(circle at 10px 100%,transparent 6px,#000 6.5px) -10px 0/20px 100% repeat-x}
+.receipt .shop{text-align:center;font-family:var(--title);color:var(--ok);font-size:26px}
+.receipt .date{text-align:center;color:var(--muted);font-size:13px;margin-bottom:10px}
+.receipt .greet{text-align:center;font-size:14px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.stage .hd{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.stage .hd b{font-family:var(--title);font-size:17px;font-weight:400}
+.line{display:flex;justify-content:space-between;gap:10px;font-size:14px;padding:3px 0}
+.line .q{color:var(--muted);margin-left:6px;font-size:12px}
+.line.total{font-weight:700;font-size:15px;border-top:1px solid var(--line);margin-top:6px;padding-top:8px}
+.line.sub{color:var(--muted);font-size:13px}
+.grand{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding:12px 14px;background:var(--soft);border-radius:6px;font-size:15px;font-weight:700}
+.grand span:last-child{font-size:20px}
+.grand.due span:last-child{color:var(--bad)} .grand.paid span:last-child{color:var(--ok)}
+.notice{margin-top:16px;color:var(--muted);font-size:13px;white-space:pre-line;line-height:1.65}
+.closed{color:var(--muted);font-size:13px;padding:6px 0}
+.acctbox{margin-top:12px;padding:12px 14px;border:1px solid var(--line);border-radius:7px;display:flex;flex-direction:column;gap:8px}
+.acct{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.acct .n{font-size:21px;font-weight:700;letter-spacing:.3px}
+.copy{border:0;background:transparent;color:var(--muted);padding:8px;border-radius:5px;display:inline-flex;align-items:center;gap:4px;font-size:13px}
+.copy:hover{background:var(--soft)} .copy svg{width:18px;height:18px}
+.band{background:var(--ok-bg);color:var(--ok);text-align:center;font-weight:700;border-radius:6px;padding:11px;font-size:14px}
+.band.bad{background:var(--bad-bg);color:var(--bad)}
+.dark{background:var(--navy);color:var(--navy-ink);border-radius:9px;padding:16px 18px;display:flex;gap:14px;align-items:center}
+.dark .ic{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;flex:0 0 auto}
+.dark small{opacity:.7;font-size:12px;display:block}
+.dark .tn{font-size:21px;font-weight:700;letter-spacing:.4px}
+.dark a{color:var(--navy-ink);font-size:13px;text-decoration:none;display:inline-block;margin-top:2px;opacity:.9}
+.dark .copy{color:var(--navy-ink);margin-left:auto}
+
+.checks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ck{border-radius:6px;padding:8px 6px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:1px;background:var(--soft)}
+.ck .mark{font-size:22px;line-height:1.2}
+.ck .lb{font-size:13px;font-weight:700}
+.ck .sb{font-size:11px;color:var(--muted)}
+.ck.ok{background:var(--ok-bg)} .ck.ok .lb{color:var(--ok)} .ck.no{background:var(--bad-bg)} .ck.no .lb{color:var(--bad)}
+
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:16px 1fr auto;gap:0 10px;align-items:start;font-size:14px;padding:0 0 14px;position:relative}
+.tl li::before{content:"";position:absolute;left:7px;top:14px;bottom:-4px;width:2px;background:var(--line)}
+.tl li:last-child::before{display:none}
+.tl .dot{width:10px;height:10px;border-radius:50%;background:var(--ok-strong);margin:5px 3px 0;box-sizing:border-box}
+.tl li.now .dot{box-shadow:0 0 0 3px var(--ok-bg)} .tl li.done .dot{opacity:.45}
+.tl li.now .t2{font-weight:700;color:var(--ok)}
+.tl .at{color:var(--muted);font-size:12px;white-space:nowrap}
+.tl .memo{grid-column:2/4;color:var(--muted);font-size:13px}
+
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:6px;font-weight:700;font-size:14px}
+.btn.p{background:var(--ok-strong);border-color:var(--ok-strong);color:#fff}
+.btn.s{padding:5px 10px;font-size:13px;border-radius:5px}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.end{justify-content:flex-end} .row.between{justify-content:space-between}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (max-width:420px){.grid3{grid-template-columns:1fr 1fr}}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.sw{display:inline-flex;align-items:center;gap:6px;font-size:14px;cursor:pointer;white-space:nowrap}
+.sw input{width:auto;flex:0 0 auto;margin:0}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media (max-width:520px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{background:var(--soft);border-radius:6px;padding:10px 12px}
+.tile small{display:block;color:var(--muted);font-size:12px}
+.tile b{font-size:17px;white-space:nowrap}
+.tile.good b{color:var(--ok)} .tile.bad b{color:var(--bad)}
+.plist{display:flex;flex-direction:column;gap:8px}
+.prow{border:1px solid var(--line);border-radius:7px;padding:10px 12px;display:grid;grid-template-columns:1fr auto;gap:4px 10px}
+.prow .nm{font-weight:700;font-size:15px}
+.prow .sm{font-size:13px;color:var(--muted);grid-column:1/3;word-break:break-word}
+.prow .amt{text-align:right;font-weight:700}
+.prow .tools{grid-column:1/3;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.prow .tools input:not([type=checkbox]),.prow .tools select{width:auto;flex:1 1 120px;padding:5px 9px;font-size:14px;border-radius:4px}
+.prow .tools .lbl{font-size:12px;color:var(--muted)}
+.prow .tools label.f{flex:1 1 120px}
+.prow .tools label.f input,.prow .tools label.f select{flex:0 0 auto;width:100%}
+.prow.packed{opacity:.5}
+.prow.visit{background:var(--visit-bg);border-color:var(--visit-bg)} .prow.cvs{background:var(--cvs-bg);border-color:var(--cvs-bg)}
+.card.visitcard{background:var(--visit-bg);border-color:var(--visit-bg)} .card.visitcard .grp,.card.cvscard .grp{background:var(--card)} .card.cvscard{background:var(--cvs-bg);border-color:var(--cvs-bg)}
+.card.visitcard .prow,.card.cvscard .prow{background:var(--card)}
+.card.visitcard .prow.alert,.card.cvscard .prow.alert{background:var(--bad-bg)}
+.card.visitcard .sec,.card.cvscard .sec{background:rgba(255,255,255,.7)}
+.pill.visit{background:var(--visit-bg);color:var(--visit)} .pill.cvs{background:var(--cvs-bg);color:var(--cvs)}
+.prow.alert{border-color:var(--bad);background:var(--bad-bg)}
+.prow.c{padding:8px 10px;gap:2px 8px}
+.prow.c .nm{font-size:14px}
+.prow.c .amt{font-size:14px}
+.prow.c .sm{font-size:12px}
+.prow.c .sm.it{color:var(--ink)}
+.prow.c .sm.it b{font-weight:700}
+.prow.c .tools{margin-top:4px;gap:4px}
+.prow.c .pill{font-size:11px;padding:2px 7px}
+.prow.c .btn.s{padding:3px 8px;font-size:12px}
+.pack{list-style:none;margin:2px 0 0;padding:0;grid-column:1/3;display:flex;flex-direction:column;gap:3px}
+.pack li{display:flex;justify-content:space-between;gap:8px;font-size:15px;padding:5px 9px;background:var(--soft);border-radius:4px}
+.pack li .qty{font-weight:700;white-space:nowrap}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+.tbl td.w{white-space:normal;min-width:140px}
+.tbl th{color:var(--muted);font-weight:600}
+.scroll{overflow-x:auto;scrollbar-width:thin}
+pre.msg{background:var(--soft);border-radius:6px;padding:12px;font:inherit;font-size:14px;white-space:pre-wrap;margin:0;line-height:1.55}
+.toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:var(--navy-ink);padding:10px 18px;border-radius:6px;font-size:14px;font-weight:700;z-index:30;max-width:90vw;text-align:center}
+.help{font-size:13px;color:var(--muted);line-height:1.55;margin:0}
+.help b{color:var(--ink)}
+details summary{cursor:pointer;font-weight:700;font-size:14px}
+.steps{display:flex;flex-wrap:wrap;gap:6px}
+.steps button{border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:6px;padding:4px 10px;font-size:13px;font-weight:700}
+.steps button.done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-bg)}
+.steps button.now{background:var(--ok-strong);color:#fff;border-color:var(--ok-strong)}
+.items{display:flex;flex-direction:column;gap:6px}
+.items .it{display:grid;grid-template-columns:1fr 52px 80px 88px 32px;gap:5px}
+@media (max-width:420px){.items .it{grid-template-columns:1fr 46px 70px 80px 30px}}
+.items .it input{padding:5px 8px;font-size:14px}
+.x{border:0;background:var(--soft);border-radius:4px;color:var(--muted)}
+.muted{color:var(--muted)}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.photos figure{margin:0;position:relative;border-radius:6px;overflow:hidden;border:1px solid var(--line);background:var(--soft)}
+.photos img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+.photos button{position:absolute;top:4px;right:4px;border:0;background:rgba(0,0,0,.55);color:#fff;border-radius:6px;width:24px;height:24px;font-size:14px}
+.photos figcaption{font-size:11px;color:var(--muted);padding:3px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drop{border:1px dashed var(--line);border-radius:7px;padding:14px;text-align:center;color:var(--muted);font-size:13px;display:block;cursor:pointer}
+.drop input{display:none}
+.modal{position:fixed;inset:0;background:rgba(20,30,30,.72);z-index:40;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:max(16px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.modal .box{background:var(--card);border-radius:9px;max-width:620px;width:100%;padding:16px 18px}
+.modal .pic{margin:10px 0 0} .modal .pic img{width:100%;border-radius:6px;display:block;border:1px solid var(--line)} .modal .pic figcaption{font-size:12px;color:var(--muted);padding:4px 2px}
+.match{border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+.fontprev{display:flex;flex-direction:column;gap:6px}
+.fontprev button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:8px 12px;text-align:left;font-size:16px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.fontprev button[aria-pressed="true"]{border-color:var(--ok-strong);background:var(--ok-bg)}
+.fontprev small{color:var(--muted);font-family:var(--body);font-size:12px}
+.kv{display:grid;grid-template-columns:76px 1fr;gap:4px 12px;font-size:14px;margin:0}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;word-break:break-word}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" hidden></div>
+<div class="modal" id="modal" hidden></div>
+
+<script>
+const LOGI_FILES={"[Content_Types].xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPFR5cGVzIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2FnZS8yMDA2L2NvbnRlbnQtdHlwZXMiPjxEZWZhdWx0IEV4dGVuc2lvbj0iYmluIiBDb250ZW50VHlwZT0iYXBwbGljYXRpb24vdm5kLm9wZW54bWxmb3JtYXRzLW9mZmljZWRvY3VtZW50LnNwcmVhZHNoZWV0bWwucHJpbnRlclNldHRpbmdzIi8+PERlZmF1bHQgRXh0ZW5zaW9uPSJyZWxzIiBDb250ZW50VHlwZT0iYXBwbGljYXRpb24vdm5kLm9wZW54bWxmb3JtYXRzLXBhY2thZ2UucmVsYXRpb25zaGlwcyt4bWwiLz48RGVmYXVsdCBFeHRlbnNpb249InhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3htbCIvPjxPdmVycmlkZSBQYXJ0TmFtZT0iL3hsL3dvcmtib29rLnhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1vZmZpY2Vkb2N1bWVudC5zcHJlYWRzaGVldG1sLnNoZWV0Lm1haW4reG1sIi8+PE92ZXJyaWRlIFBhcnROYW1lPSIveGwvd29ya3NoZWV0cy9zaGVldDEueG1sIiBDb250ZW50VHlwZT0iYXBwbGljYXRpb24vdm5kLm9wZW54bWxmb3JtYXRzLW9mZmljZWRvY3VtZW50LnNwcmVhZHNoZWV0bWwud29ya3NoZWV0K3htbCIvPjxPdmVycmlkZSBQYXJ0TmFtZT0iL3hsL3RoZW1lL3RoZW1lMS54bWwiIENvbnRlbnRUeXBlPSJhcHBsaWNhdGlvbi92bmQub3BlbnhtbGZvcm1hdHMtb2ZmaWNlZG9jdW1lbnQudGhlbWUreG1sIi8+PE92ZXJyaWRlIFBhcnROYW1lPSIveGwvc3R5bGVzLnhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1vZmZpY2Vkb2N1bWVudC5zcHJlYWRzaGVldG1sLnN0eWxlcyt4bWwiLz48T3ZlcnJpZGUgUGFydE5hbWU9Ii94bC9zaGFyZWRTdHJpbmdzLnhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1vZmZpY2Vkb2N1bWVudC5zcHJlYWRzaGVldG1sLnNoYXJlZFN0cmluZ3MreG1sIi8+PE92ZXJyaWRlIFBhcnROYW1lPSIvZG9jUHJvcHMvY29yZS54bWwiIENvbnRlbnRUeXBlPSJhcHBsaWNhdGlvbi92bmQub3BlbnhtbGZvcm1hdHMtcGFja2FnZS5jb3JlLXByb3BlcnRpZXMreG1sIi8+PE92ZXJyaWRlIFBhcnROYW1lPSIvZG9jUHJvcHMvYXBwLnhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1vZmZpY2Vkb2N1bWVudC5leHRlbmRlZC1wcm9wZXJ0aWVzK3htbCIvPjxPdmVycmlkZSBQYXJ0TmFtZT0iL2RvY1Byb3BzL2N1c3RvbS54bWwiIENvbnRlbnRUeXBlPSJhcHBsaWNhdGlvbi92bmQub3BlbnhtbGZvcm1hdHMtb2ZmaWNlZG9jdW1lbnQuY3VzdG9tLXByb3BlcnRpZXMreG1sIi8+PC9UeXBlcz4=", "_rels/.rels": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPFJlbGF0aW9uc2hpcHMgeG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9wYWNrYWdlLzIwMDYvcmVsYXRpb25zaGlwcyI+PFJlbGF0aW9uc2hpcCBJZD0icklkMyIgVHlwZT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29mZmljZURvY3VtZW50LzIwMDYvcmVsYXRpb25zaGlwcy9leHRlbmRlZC1wcm9wZXJ0aWVzIiBUYXJnZXQ9ImRvY1Byb3BzL2FwcC54bWwiLz48UmVsYXRpb25zaGlwIElkPSJySWQyIiBUeXBlPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2FnZS8yMDA2L3JlbGF0aW9uc2hpcHMvbWV0YWRhdGEvY29yZS1wcm9wZXJ0aWVzIiBUYXJnZXQ9ImRvY1Byb3BzL2NvcmUueG1sIi8+PFJlbGF0aW9uc2hpcCBJZD0icklkMSIgVHlwZT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29mZmljZURvY3VtZW50LzIwMDYvcmVsYXRpb25zaGlwcy9vZmZpY2VEb2N1bWVudCIgVGFyZ2V0PSJ4bC93b3JrYm9vay54bWwiLz48UmVsYXRpb25zaGlwIElkPSJySWQ0IiBUeXBlPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvb2ZmaWNlRG9jdW1lbnQvMjAwNi9yZWxhdGlvbnNoaXBzL2N1c3RvbS1wcm9wZXJ0aWVzIiBUYXJnZXQ9ImRvY1Byb3BzL2N1c3RvbS54bWwiLz48L1JlbGF0aW9uc2hpcHM+", "xl/workbook.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPHdvcmtib29rIHhtbG5zPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvc3ByZWFkc2hlZXRtbC8yMDA2L21haW4iIHhtbG5zOnI9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMiIHhtbG5zOm1jPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvbWFya3VwLWNvbXBhdGliaWxpdHkvMjAwNiIgbWM6SWdub3JhYmxlPSJ4MTUgeHIgeHI2IHhyMTAgeHIyIiB4bWxuczp4MTU9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxMC8xMS9tYWluIiB4bWxuczp4cj0iaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS9vZmZpY2Uvc3ByZWFkc2hlZXRtbC8yMDE0L3JldmlzaW9uIiB4bWxuczp4cjY9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxNi9yZXZpc2lvbjYiIHhtbG5zOnhyMTA9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxNi9yZXZpc2lvbjEwIiB4bWxuczp4cjI9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxNS9yZXZpc2lvbjIiPjxmaWxlVmVyc2lvbiBhcHBOYW1lPSJ4bCIgbGFzdEVkaXRlZD0iNyIgbG93ZXN0RWRpdGVkPSI0IiBydXBCdWlsZD0iMzAyMjgiLz48d29ya2Jvb2tQciBkZWZhdWx0VGhlbWVWZXJzaW9uPSIxNjY5MjUiLz48bWM6QWx0ZXJuYXRlQ29udGVudCB4bWxuczptYz0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL21hcmt1cC1jb21wYXRpYmlsaXR5LzIwMDYiPjxtYzpDaG9pY2UgUmVxdWlyZXM9IngxNSI+PHgxNWFjOmFic1BhdGggdXJsPSJDOlxVc2Vyc1zsoJXshozsnKRcRG93bmxvYWRzXCIgeG1sbnM6eDE1YWM9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxMC8xMS9hYyIvPjwvbWM6Q2hvaWNlPjwvbWM6QWx0ZXJuYXRlQ29udGVudD48eHI6cmV2aXNpb25QdHIgcmV2SURMYXN0U2F2ZT0iMCIgZG9jdW1lbnRJZD0iMTNfbmNyOjFfezI2ODk3MEZCLTFBQUYtNDZEMy1CRkVBLTc0RUJEQzZCNDQxRX0iIHhyNjpjb2F1dGhWZXJzaW9uTGFzdD0iNDciIHhyNjpjb2F1dGhWZXJzaW9uTWF4PSI0NyIgeHIxMDp1aWRMYXN0U2F2ZT0iezAwMDAwMDAwLTAwMDAtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMH0iLz48Ym9va1ZpZXdzPjx3b3JrYm9va1ZpZXcgeFdpbmRvdz0iMjkwMjUiIHlXaW5kb3c9IjMwMDAiIHdpbmRvd1dpZHRoPSIyNzUxMCIgd2luZG93SGVpZ2h0PSIxMTI5NSIgeHIyOnVpZD0iezAwMDAwMDAwLTAwMEQtMDAwMC1GRkZGLUZGRkYwMDAwMDAwMH0iLz48L2Jvb2tWaWV3cz48c2hlZXRzPjxzaGVldCBuYW1lPSJzYW1wbGUiIHNoZWV0SWQ9IjIiIHI6aWQ9InJJZDEiLz48L3NoZWV0cz48Y2FsY1ByIGNhbGNJZD0iMTI1NzI1Ii8+PC93b3JrYm9vaz4=", "xl/_rels/workbook.xml.rels": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPFJlbGF0aW9uc2hpcHMgeG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9wYWNrYWdlLzIwMDYvcmVsYXRpb25zaGlwcyI+PFJlbGF0aW9uc2hpcCBJZD0icklkMyIgVHlwZT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29mZmljZURvY3VtZW50LzIwMDYvcmVsYXRpb25zaGlwcy9zdHlsZXMiIFRhcmdldD0ic3R5bGVzLnhtbCIvPjxSZWxhdGlvbnNoaXAgSWQ9InJJZDIiIFR5cGU9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMvdGhlbWUiIFRhcmdldD0idGhlbWUvdGhlbWUxLnhtbCIvPjxSZWxhdGlvbnNoaXAgSWQ9InJJZDEiIFR5cGU9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMvd29ya3NoZWV0IiBUYXJnZXQ9IndvcmtzaGVldHMvc2hlZXQxLnhtbCIvPjxSZWxhdGlvbnNoaXAgSWQ9InJJZDQiIFR5cGU9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMvc2hhcmVkU3RyaW5ncyIgVGFyZ2V0PSJzaGFyZWRTdHJpbmdzLnhtbCIvPjwvUmVsYXRpb25zaGlwcz4=", "xl/theme/theme1.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPGE6dGhlbWUgeG1sbnM6YT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL2RyYXdpbmdtbC8yMDA2L21haW4iIG5hbWU9Ik9mZmljZSAyMDEzIC0gMjAyMiDthYzrp4giPjxhOnRoZW1lRWxlbWVudHM+PGE6Y2xyU2NoZW1lIG5hbWU9Ik9mZmljZSAyMDEzIC0gMjAyMiI+PGE6ZGsxPjxhOnN5c0NsciB2YWw9IndpbmRvd1RleHQiIGxhc3RDbHI9IjAwMDAwMCIvPjwvYTpkazE+PGE6bHQxPjxhOnN5c0NsciB2YWw9IndpbmRvdyIgbGFzdENscj0iRkZGRkZGIi8+PC9hOmx0MT48YTpkazI+PGE6c3JnYkNsciB2YWw9IjQ0NTQ2QSIvPjwvYTpkazI+PGE6bHQyPjxhOnNyZ2JDbHIgdmFsPSJFN0U2RTYiLz48L2E6bHQyPjxhOmFjY2VudDE+PGE6c3JnYkNsciB2YWw9IjQ0NzJDNCIvPjwvYTphY2NlbnQxPjxhOmFjY2VudDI+PGE6c3JnYkNsciB2YWw9IkVEN0QzMSIvPjwvYTphY2NlbnQyPjxhOmFjY2VudDM+PGE6c3JnYkNsciB2YWw9IkE1QTVBNSIvPjwvYTphY2NlbnQzPjxhOmFjY2VudDQ+PGE6c3JnYkNsciB2YWw9IkZGQzAwMCIvPjwvYTphY2NlbnQ0PjxhOmFjY2VudDU+PGE6c3JnYkNsciB2YWw9IjVCOUJENSIvPjwvYTphY2NlbnQ1PjxhOmFjY2VudDY+PGE6c3JnYkNsciB2YWw9IjcwQUQ0NyIvPjwvYTphY2NlbnQ2PjxhOmhsaW5rPjxhOnNyZ2JDbHIgdmFsPSIwNTYzQzEiLz48L2E6aGxpbms+PGE6Zm9sSGxpbms+PGE6c3JnYkNsciB2YWw9Ijk1NEY3MiIvPjwvYTpmb2xIbGluaz48L2E6Y2xyU2NoZW1lPjxhOmZvbnRTY2hlbWUgbmFtZT0iT2ZmaWNlIDIwMTMgLSAyMDIyIj48YTptYWpvckZvbnQ+PGE6bGF0aW4gdHlwZWZhY2U9IkNhbGlicmkgTGlnaHQiIHBhbm9zZT0iMDIwRjAzMDIwMjAyMDQwMzAyMDQiLz48YTplYSB0eXBlZmFjZT0iIi8+PGE6Y3MgdHlwZWZhY2U9IiIvPjxhOmZvbnQgc2NyaXB0PSJKcGFuIiB0eXBlZmFjZT0i5ri444K044K344OD44KvIExpZ2h0Ii8+PGE6Zm9udCBzY3JpcHQ9IkhhbmciIHR5cGVmYWNlPSLrp5HsnYAg6rOg65SVIi8+PGE6Zm9udCBzY3JpcHQ9IkhhbnMiIHR5cGVmYWNlPSLnrYnnur8gTGlnaHQiLz48YTpmb250IHNjcmlwdD0iSGFudCIgdHlwZWZhY2U9IuaWsOe0sOaYjumrlCIvPjxhOmZvbnQgc2NyaXB0PSJBcmFiIiB0eXBlZmFjZT0iVGltZXMgTmV3IFJvbWFuIi8+PGE6Zm9udCBzY3JpcHQ9IkhlYnIiIHR5cGVmYWNlPSJUaW1lcyBOZXcgUm9tYW4iLz48YTpmb250IHNjcmlwdD0iVGhhaSIgdHlwZWZhY2U9IlRhaG9tYSIvPjxhOmZvbnQgc2NyaXB0PSJFdGhpIiB0eXBlZmFjZT0iTnlhbGEiLz48YTpmb250IHNjcmlwdD0iQmVuZyIgdHlwZWZhY2U9IlZyaW5kYSIvPjxhOmZvbnQgc2NyaXB0PSJHdWpyIiB0eXBlZmFjZT0iU2hydXRpIi8+PGE6Zm9udCBzY3JpcHQ9IktobXIiIHR5cGVmYWNlPSJNb29sQm9yYW4iLz48YTpmb250IHNjcmlwdD0iS25kYSIgdHlwZWZhY2U9IlR1bmdhIi8+PGE6Zm9udCBzY3JpcHQ9Ikd1cnUiIHR5cGVmYWNlPSJSYWF2aSIvPjxhOmZvbnQgc2NyaXB0PSJDYW5zIiB0eXBlZmFjZT0iRXVwaGVtaWEiLz48YTpmb250IHNjcmlwdD0iQ2hlciIgdHlwZWZhY2U9IlBsYW50YWdlbmV0IENoZXJva2VlIi8+PGE6Zm9udCBzY3JpcHQ9IllpaWkiIHR5cGVmYWNlPSJNaWNyb3NvZnQgWWkgQmFpdGkiLz48YTpmb250IHNjcmlwdD0iVGlidCIgdHlwZWZhY2U9Ik1pY3Jvc29mdCBIaW1hbGF5YSIvPjxhOmZvbnQgc2NyaXB0PSJUaGFhIiB0eXBlZmFjZT0iTVYgQm9saSIvPjxhOmZvbnQgc2NyaXB0PSJEZXZhIiB0eXBlZmFjZT0iTWFuZ2FsIi8+PGE6Zm9udCBzY3JpcHQ9IlRlbHUiIHR5cGVmYWNlPSJHYXV0YW1pIi8+PGE6Zm9udCBzY3JpcHQ9IlRhbWwiIHR5cGVmYWNlPSJMYXRoYSIvPjxhOmZvbnQgc2NyaXB0PSJTeXJjIiB0eXBlZmFjZT0iRXN0cmFuZ2VsbyBFZGVzc2EiLz48YTpmb250IHNjcmlwdD0iT3J5YSIgdHlwZWZhY2U9IkthbGluZ2EiLz48YTpmb250IHNjcmlwdD0iTWx5bSIgdHlwZWZhY2U9IkthcnRpa2EiLz48YTpmb250IHNjcmlwdD0iTGFvbyIgdHlwZWZhY2U9IkRva0NoYW1wYSIvPjxhOmZvbnQgc2NyaXB0PSJTaW5oIiB0eXBlZmFjZT0iSXNrb29sYSBQb3RhIi8+PGE6Zm9udCBzY3JpcHQ9Ik1vbmciIHR5cGVmYWNlPSJNb25nb2xpYW4gQmFpdGkiLz48YTpmb250IHNjcmlwdD0iVmlldCIgdHlwZWZhY2U9IlRpbWVzIE5ldyBSb21hbiIvPjxhOmZvbnQgc2NyaXB0PSJVaWdoIiB0eXBlZmFjZT0iTWljcm9zb2Z0IFVpZ2h1ciIvPjxhOmZvbnQgc2NyaXB0PSJHZW9yIiB0eXBlZmFjZT0iU3lsZmFlbiIvPjxhOmZvbnQgc2NyaXB0PSJBcm1uIiB0eXBlZmFjZT0iQXJpYWwiLz48YTpmb250IHNjcmlwdD0iQnVnaSIgdHlwZWZhY2U9IkxlZWxhd2FkZWUgVUkiLz48YTpmb250IHNjcmlwdD0iQm9wbyIgdHlwZWZhY2U9Ik1pY3Jvc29mdCBKaGVuZ0hlaSIvPjxhOmZvbnQgc2NyaXB0PSJKYXZhIiB0eXBlZmFjZT0iSmF2YW5lc2UgVGV4dCIvPjxhOmZvbnQgc2NyaXB0PSJMaXN1IiB0eXBlZmFjZT0iU2Vnb2UgVUkiLz48YTpmb250IHNjcmlwdD0iTXltciIgdHlwZWZhY2U9Ik15YW5tYXIgVGV4dCIvPjxhOmZvbnQgc2NyaXB0PSJOa29vIiB0eXBlZmFjZT0iRWJyaW1hIi8+PGE6Zm9udCBzY3JpcHQ9Ik9sY2siIHR5cGVmYWNlPSJOaXJtYWxhIFVJIi8+PGE6Zm9udCBzY3JpcHQ9Ik9zbWEiIHR5cGVmYWNlPSJFYnJpbWEiLz48YTpmb250IHNjcmlwdD0iUGhhZyIgdHlwZWZhY2U9IlBoYWdzcGEiLz48YTpmb250IHNjcmlwdD0iU3lybiIgdHlwZWZhY2U9IkVzdHJhbmdlbG8gRWRlc3NhIi8+PGE6Zm9udCBzY3JpcHQ9IlN5cmoiIHR5cGVmYWNlPSJFc3RyYW5nZWxvIEVkZXNzYSIvPjxhOmZvbnQgc2NyaXB0PSJTeXJlIiB0eXBlZmFjZT0iRXN0cmFuZ2VsbyBFZGVzc2EiLz48YTpmb250IHNjcmlwdD0iU29yYSIgdHlwZWZhY2U9Ik5pcm1hbGEgVUkiLz48YTpmb250IHNjcmlwdD0iVGFsZSIgdHlwZWZhY2U9Ik1pY3Jvc29mdCBUYWkgTGUiLz48YTpmb250IHNjcmlwdD0iVGFsdSIgdHlwZWZhY2U9Ik1pY3Jvc29mdCBOZXcgVGFpIEx1ZSIvPjxhOmZvbnQgc2NyaXB0PSJUZm5nIiB0eXBlZmFjZT0iRWJyaW1hIi8+PC9hOm1ham9yRm9udD48YTptaW5vckZvbnQ+PGE6bGF0aW4gdHlwZWZhY2U9IkNhbGlicmkiIHBhbm9zZT0iMDIwRjA1MDIwMjAyMDQwMzAyMDQiLz48YTplYSB0eXBlZmFjZT0iIi8+PGE6Y3MgdHlwZWZhY2U9IiIvPjxhOmZvbnQgc2NyaXB0PSJKcGFuIiB0eXBlZmFjZT0i5ri444K044K344OD44KvIi8+PGE6Zm9udCBzY3JpcHQ9IkhhbmciIHR5cGVmYWNlPSLrp5HsnYAg6rOg65SVIi8+PGE6Zm9udCBzY3JpcHQ9IkhhbnMiIHR5cGVmYWNlPSLnrYnnur8iLz48YTpmb250IHNjcmlwdD0iSGFudCIgdHlwZWZhY2U9IuaWsOe0sOaYjumrlCIvPjxhOmZvbnQgc2NyaXB0PSJBcmFiIiB0eXBlZmFjZT0iQXJpYWwiLz48YTpmb250IHNjcmlwdD0iSGViciIgdHlwZWZhY2U9IkFyaWFsIi8+PGE6Zm9udCBzY3JpcHQ9IlRoYWkiIHR5cGVmYWNlPSJUYWhvbWEiLz48YTpmb250IHNjcmlwdD0iRXRoaSIgdHlwZWZhY2U9Ik55YWxhIi8+PGE6Zm9udCBzY3JpcHQ9IkJlbmciIHR5cGVmYWNlPSJWcmluZGEiLz48YTpmb250IHNjcmlwdD0iR3VqciIgdHlwZWZhY2U9IlNocnV0aSIvPjxhOmZvbnQgc2NyaXB0PSJLaG1yIiB0eXBlZmFjZT0iRGF1blBlbmgiLz48YTpmb250IHNjcmlwdD0iS25kYSIgdHlwZWZhY2U9IlR1bmdhIi8+PGE6Zm9udCBzY3JpcHQ9Ikd1cnUiIHR5cGVmYWNlPSJSYWF2aSIvPjxhOmZvbnQgc2NyaXB0PSJDYW5zIiB0eXBlZmFjZT0iRXVwaGVtaWEiLz48YTpmb250IHNjcmlwdD0iQ2hlciIgdHlwZWZhY2U9IlBsYW50YWdlbmV0IENoZXJva2VlIi8+PGE6Zm9udCBzY3JpcHQ9IllpaWkiIHR5cGVmYWNlPSJNaWNyb3NvZnQgWWkgQmFpdGkiLz48YTpmb250IHNjcmlwdD0iVGlidCIgdHlwZWZhY2U9Ik1pY3Jvc29mdCBIaW1hbGF5YSIvPjxhOmZvbnQgc2NyaXB0PSJUaGFhIiB0eXBlZmFjZT0iTVYgQm9saSIvPjxhOmZvbnQgc2NyaXB0PSJEZXZhIiB0eXBlZmFjZT0iTWFuZ2FsIi8+PGE6Zm9udCBzY3JpcHQ9IlRlbHUiIHR5cGVmYWNlPSJHYXV0YW1pIi8+PGE6Zm9udCBzY3JpcHQ9IlRhbWwiIHR5cGVmYWNlPSJMYXRoYSIvPjxhOmZvbnQgc2NyaXB0PSJTeXJjIiB0eXBlZmFjZT0iRXN0cmFuZ2VsbyBFZGVzc2EiLz48YTpmb250IHNjcmlwdD0iT3J5YSIgdHlwZWZhY2U9IkthbGluZ2EiLz48YTpmb250IHNjcmlwdD0iTWx5bSIgdHlwZWZhY2U9IkthcnRpa2EiLz48YTpmb250IHNjcmlwdD0iTGFvbyIgdHlwZWZhY2U9IkRva0NoYW1wYSIvPjxhOmZvbnQgc2NyaXB0PSJTaW5oIiB0eXBlZmFjZT0iSXNrb29sYSBQb3RhIi8+PGE6Zm9udCBzY3JpcHQ9Ik1vbmciIHR5cGVmYWNlPSJNb25nb2xpYW4gQmFpdGkiLz48YTpmb250IHNjcmlwdD0iVmlldCIgdHlwZWZhY2U9IkFyaWFsIi8+PGE6Zm9udCBzY3JpcHQ9IlVpZ2giIHR5cGVmYWNlPSJNaWNyb3NvZnQgVWlnaHVyIi8+PGE6Zm9udCBzY3JpcHQ9Ikdlb3IiIHR5cGVmYWNlPSJTeWxmYWVuIi8+PGE6Zm9udCBzY3JpcHQ9IkFybW4iIHR5cGVmYWNlPSJBcmlhbCIvPjxhOmZvbnQgc2NyaXB0PSJCdWdpIiB0eXBlZmFjZT0iTGVlbGF3YWRlZSBVSSIvPjxhOmZvbnQgc2NyaXB0PSJCb3BvIiB0eXBlZmFjZT0iTWljcm9zb2Z0IEpoZW5nSGVpIi8+PGE6Zm9udCBzY3JpcHQ9IkphdmEiIHR5cGVmYWNlPSJKYXZhbmVzZSBUZXh0Ii8+PGE6Zm9udCBzY3JpcHQ9Ikxpc3UiIHR5cGVmYWNlPSJTZWdvZSBVSSIvPjxhOmZvbnQgc2NyaXB0PSJNeW1yIiB0eXBlZmFjZT0iTXlhbm1hciBUZXh0Ii8+PGE6Zm9udCBzY3JpcHQ9Ik5rb28iIHR5cGVmYWNlPSJFYnJpbWEiLz48YTpmb250IHNjcmlwdD0iT2xjayIgdHlwZWZhY2U9Ik5pcm1hbGEgVUkiLz48YTpmb250IHNjcmlwdD0iT3NtYSIgdHlwZWZhY2U9IkVicmltYSIvPjxhOmZvbnQgc2NyaXB0PSJQaGFnIiB0eXBlZmFjZT0iUGhhZ3NwYSIvPjxhOmZvbnQgc2NyaXB0PSJTeXJuIiB0eXBlZmFjZT0iRXN0cmFuZ2VsbyBFZGVzc2EiLz48YTpmb250IHNjcmlwdD0iU3lyaiIgdHlwZWZhY2U9IkVzdHJhbmdlbG8gRWRlc3NhIi8+PGE6Zm9udCBzY3JpcHQ9IlN5cmUiIHR5cGVmYWNlPSJFc3RyYW5nZWxvIEVkZXNzYSIvPjxhOmZvbnQgc2NyaXB0PSJTb3JhIiB0eXBlZmFjZT0iTmlybWFsYSBVSSIvPjxhOmZvbnQgc2NyaXB0PSJUYWxlIiB0eXBlZmFjZT0iTWljcm9zb2Z0IFRhaSBMZSIvPjxhOmZvbnQgc2NyaXB0PSJUYWx1IiB0eXBlZmFjZT0iTWljcm9zb2Z0IE5ldyBUYWkgTHVlIi8+PGE6Zm9udCBzY3JpcHQ9IlRmbmciIHR5cGVmYWNlPSJFYnJpbWEiLz48L2E6bWlub3JGb250PjwvYTpmb250U2NoZW1lPjxhOmZtdFNjaGVtZSBuYW1lPSJPZmZpY2UgMjAxMyAtIDIwMjIiPjxhOmZpbGxTdHlsZUxzdD48YTpzb2xpZEZpbGw+PGE6c2NoZW1lQ2xyIHZhbD0icGhDbHIiLz48L2E6c29saWRGaWxsPjxhOmdyYWRGaWxsIHJvdFdpdGhTaGFwZT0iMSI+PGE6Z3NMc3Q+PGE6Z3MgcG9zPSIwIj48YTpzY2hlbWVDbHIgdmFsPSJwaENsciI+PGE6bHVtTW9kIHZhbD0iMTEwMDAwIi8+PGE6c2F0TW9kIHZhbD0iMTA1MDAwIi8+PGE6dGludCB2YWw9IjY3MDAwIi8+PC9hOnNjaGVtZUNscj48L2E6Z3M+PGE6Z3MgcG9zPSI1MDAwMCI+PGE6c2NoZW1lQ2xyIHZhbD0icGhDbHIiPjxhOmx1bU1vZCB2YWw9IjEwNTAwMCIvPjxhOnNhdE1vZCB2YWw9IjEwMzAwMCIvPjxhOnRpbnQgdmFsPSI3MzAwMCIvPjwvYTpzY2hlbWVDbHI+PC9hOmdzPjxhOmdzIHBvcz0iMTAwMDAwIj48YTpzY2hlbWVDbHIgdmFsPSJwaENsciI+PGE6bHVtTW9kIHZhbD0iMTA1MDAwIi8+PGE6c2F0TW9kIHZhbD0iMTA5MDAwIi8+PGE6dGludCB2YWw9IjgxMDAwIi8+PC9hOnNjaGVtZUNscj48L2E6Z3M+PC9hOmdzTHN0PjxhOmxpbiBhbmc9IjU0MDAwMDAiIHNjYWxlZD0iMCIvPjwvYTpncmFkRmlsbD48YTpncmFkRmlsbCByb3RXaXRoU2hhcGU9IjEiPjxhOmdzTHN0PjxhOmdzIHBvcz0iMCI+PGE6c2NoZW1lQ2xyIHZhbD0icGhDbHIiPjxhOnNhdE1vZCB2YWw9IjEwMzAwMCIvPjxhOmx1bU1vZCB2YWw9IjEwMjAwMCIvPjxhOnRpbnQgdmFsPSI5NDAwMCIvPjwvYTpzY2hlbWVDbHI+PC9hOmdzPjxhOmdzIHBvcz0iNTAwMDAiPjxhOnNjaGVtZUNsciB2YWw9InBoQ2xyIj48YTpzYXRNb2QgdmFsPSIxMTAwMDAiLz48YTpsdW1Nb2QgdmFsPSIxMDAwMDAiLz48YTpzaGFkZSB2YWw9IjEwMDAwMCIvPjwvYTpzY2hlbWVDbHI+PC9hOmdzPjxhOmdzIHBvcz0iMTAwMDAwIj48YTpzY2hlbWVDbHIgdmFsPSJwaENsciI+PGE6bHVtTW9kIHZhbD0iOTkwMDAiLz48YTpzYXRNb2QgdmFsPSIxMjAwMDAiLz48YTpzaGFkZSB2YWw9Ijc4MDAwIi8+PC9hOnNjaGVtZUNscj48L2E6Z3M+PC9hOmdzTHN0PjxhOmxpbiBhbmc9IjU0MDAwMDAiIHNjYWxlZD0iMCIvPjwvYTpncmFkRmlsbD48L2E6ZmlsbFN0eWxlTHN0PjxhOmxuU3R5bGVMc3Q+PGE6bG4gdz0iNjM1MCIgY2FwPSJmbGF0IiBjbXBkPSJzbmciIGFsZ249ImN0ciI+PGE6c29saWRGaWxsPjxhOnNjaGVtZUNsciB2YWw9InBoQ2xyIi8+PC9hOnNvbGlkRmlsbD48YTpwcnN0RGFzaCB2YWw9InNvbGlkIi8+PGE6bWl0ZXIgbGltPSI4MDAwMDAiLz48L2E6bG4+PGE6bG4gdz0iMTI3MDAiIGNhcD0iZmxhdCIgY21wZD0ic25nIiBhbGduPSJjdHIiPjxhOnNvbGlkRmlsbD48YTpzY2hlbWVDbHIgdmFsPSJwaENsciIvPjwvYTpzb2xpZEZpbGw+PGE6cHJzdERhc2ggdmFsPSJzb2xpZCIvPjxhOm1pdGVyIGxpbT0iODAwMDAwIi8+PC9hOmxuPjxhOmxuIHc9IjE5MDUwIiBjYXA9ImZsYXQiIGNtcGQ9InNuZyIgYWxnbj0iY3RyIj48YTpzb2xpZEZpbGw+PGE6c2NoZW1lQ2xyIHZhbD0icGhDbHIiLz48L2E6c29saWRGaWxsPjxhOnByc3REYXNoIHZhbD0ic29saWQiLz48YTptaXRlciBsaW09IjgwMDAwMCIvPjwvYTpsbj48L2E6bG5TdHlsZUxzdD48YTplZmZlY3RTdHlsZUxzdD48YTplZmZlY3RTdHlsZT48YTplZmZlY3RMc3QvPjwvYTplZmZlY3RTdHlsZT48YTplZmZlY3RTdHlsZT48YTplZmZlY3RMc3QvPjwvYTplZmZlY3RTdHlsZT48YTplZmZlY3RTdHlsZT48YTplZmZlY3RMc3Q+PGE6b3V0ZXJTaGR3IGJsdXJSYWQ9IjU3MTUwIiBkaXN0PSIxOTA1MCIgZGlyPSI1NDAwMDAwIiBhbGduPSJjdHIiIHJvdFdpdGhTaGFwZT0iMCI+PGE6c3JnYkNsciB2YWw9IjAwMDAwMCI+PGE6YWxwaGEgdmFsPSI2MzAwMCIvPjwvYTpzcmdiQ2xyPjwvYTpvdXRlclNoZHc+PC9hOmVmZmVjdExzdD48L2E6ZWZmZWN0U3R5bGU+PC9hOmVmZmVjdFN0eWxlTHN0PjxhOmJnRmlsbFN0eWxlTHN0PjxhOnNvbGlkRmlsbD48YTpzY2hlbWVDbHIgdmFsPSJwaENsciIvPjwvYTpzb2xpZEZpbGw+PGE6c29saWRGaWxsPjxhOnNjaGVtZUNsciB2YWw9InBoQ2xyIj48YTp0aW50IHZhbD0iOTUwMDAiLz48YTpzYXRNb2QgdmFsPSIxNzAwMDAiLz48L2E6c2NoZW1lQ2xyPjwvYTpzb2xpZEZpbGw+PGE6Z3JhZEZpbGwgcm90V2l0aFNoYXBlPSIxIj48YTpnc0xzdD48YTpncyBwb3M9IjAiPjxhOnNjaGVtZUNsciB2YWw9InBoQ2xyIj48YTp0aW50IHZhbD0iOTMwMDAiLz48YTpzYXRNb2QgdmFsPSIxNTAwMDAiLz48YTpzaGFkZSB2YWw9Ijk4MDAwIi8+PGE6bHVtTW9kIHZhbD0iMTAyMDAwIi8+PC9hOnNjaGVtZUNscj48L2E6Z3M+PGE6Z3MgcG9zPSI1MDAwMCI+PGE6c2NoZW1lQ2xyIHZhbD0icGhDbHIiPjxhOnRpbnQgdmFsPSI5ODAwMCIvPjxhOnNhdE1vZCB2YWw9IjEzMDAwMCIvPjxhOnNoYWRlIHZhbD0iOTAwMDAiLz48YTpsdW1Nb2QgdmFsPSIxMDMwMDAiLz48L2E6c2NoZW1lQ2xyPjwvYTpncz48YTpncyBwb3M9IjEwMDAwMCI+PGE6c2NoZW1lQ2xyIHZhbD0icGhDbHIiPjxhOnNoYWRlIHZhbD0iNjMwMDAiLz48YTpzYXRNb2QgdmFsPSIxMjAwMDAiLz48L2E6c2NoZW1lQ2xyPjwvYTpncz48L2E6Z3NMc3Q+PGE6bGluIGFuZz0iNTQwMDAwMCIgc2NhbGVkPSIwIi8+PC9hOmdyYWRGaWxsPjwvYTpiZ0ZpbGxTdHlsZUxzdD48L2E6Zm10U2NoZW1lPjwvYTp0aGVtZUVsZW1lbnRzPjxhOm9iamVjdERlZmF1bHRzLz48YTpleHRyYUNsclNjaGVtZUxzdC8+PGE6ZXh0THN0PjxhOmV4dCB1cmk9InswNUE0QzI1Qy0wODVFLTQzNDAtODVBMy1BNTUzMUU1MTBEQjJ9Ij48dGhtMTU6dGhlbWVGYW1pbHkgeG1sbnM6dGhtMTU9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3RoZW1lbWwvMjAxMi9tYWluIiBuYW1lPSJPZmZpY2UgMjAxMyAtIDIwMjIgVGhlbWUiIGlkPSJ7NjJGOTM5QjYtOTNBRi00REI4LTlDNkItRDZDN0RGREM1ODlGfSIgdmlkPSJ7NEEzQzQ2RTgtNjFDQy00NjAzLUE1ODktNzQyMkE0N0E4RTRBfSIvPjwvYTpleHQ+PC9hOmV4dExzdD48L2E6dGhlbWU+", "xl/styles.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPHN0eWxlU2hlZXQgeG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9zcHJlYWRzaGVldG1sLzIwMDYvbWFpbiIgeG1sbnM6bWM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9tYXJrdXAtY29tcGF0aWJpbGl0eS8yMDA2IiBtYzpJZ25vcmFibGU9IngxNGFjIHgxNnIyIHhyIiB4bWxuczp4MTRhYz0iaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS9vZmZpY2Uvc3ByZWFkc2hlZXRtbC8yMDA5LzkvYWMiIHhtbG5zOngxNnIyPSJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL29mZmljZS9zcHJlYWRzaGVldG1sLzIwMTUvMDIvbWFpbiIgeG1sbnM6eHI9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxNC9yZXZpc2lvbiI+PG51bUZtdHMgY291bnQ9IjEiPjxudW1GbXQgbnVtRm10SWQ9IjE3NiIgZm9ybWF0Q29kZT0iMF8pO1tSZWRdXCgwXCkiLz48L251bUZtdHM+PGZvbnRzIGNvdW50PSIxMSIgeDE0YWM6a25vd25Gb250cz0iMSI+PGZvbnQ+PHN6IHZhbD0iMTEiLz48Y29sb3IgdGhlbWU9IjEiLz48bmFtZSB2YWw9IuunkeydgCDqs6DrlJUiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PHNjaGVtZSB2YWw9Im1pbm9yIi8+PC9mb250Pjxmb250PjxzeiB2YWw9IjgiLz48bmFtZSB2YWw9IuunkeydgCDqs6DrlJUiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PC9mb250Pjxmb250PjxzeiB2YWw9IjkiLz48Y29sb3IgdGhlbWU9IjEiLz48bmFtZSB2YWw9Iuq1tOumvCIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L2ZvbnQ+PGZvbnQ+PHN6IHZhbD0iMTEiLz48Y29sb3IgdGhlbWU9IjEiLz48bmFtZSB2YWw9Iuq1tOumvCIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L2ZvbnQ+PGZvbnQ+PHN6IHZhbD0iOSIvPjxjb2xvciBpbmRleGVkPSIxMCIvPjxuYW1lIHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvZm9udD48Zm9udD48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjgiLz48bmFtZSB2YWw9Iuq1tOumvCIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L2ZvbnQ+PGZvbnQ+PHN6IHZhbD0iOSIvPjxjb2xvciByZ2I9IkZGRkYwMDAwIi8+PG5hbWUgdmFsPSLqtbTrprwiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PC9mb250Pjxmb250PjxzeiB2YWw9IjkiLz48Y29sb3IgdGhlbWU9IjEiLz48bmFtZSB2YWw9IuunkeydgCDqs6DrlJUiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PHNjaGVtZSB2YWw9Im1pbm9yIi8+PC9mb250Pjxmb250PjxzeiB2YWw9IjkiLz48Y29sb3IgaW5kZXhlZD0iMTAiLz48bmFtZSB2YWw9IuunkeydgCDqs6DrlJUiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PC9mb250Pjxmb250PjxzeiB2YWw9IjkiLz48Y29sb3IgcmdiPSJGRkZGMDAwMCIvPjxuYW1lIHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIyIi8+PC9mb250Pjxmb250PjxzeiB2YWw9IjkiLz48Y29sb3IgaW5kZXhlZD0iOCIvPjxuYW1lIHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L2ZvbnQ+PC9mb250cz48ZmlsbHMgY291bnQ9IjMiPjxmaWxsPjxwYXR0ZXJuRmlsbCBwYXR0ZXJuVHlwZT0ibm9uZSIvPjwvZmlsbD48ZmlsbD48cGF0dGVybkZpbGwgcGF0dGVyblR5cGU9ImdyYXkxMjUiLz48L2ZpbGw+PGZpbGw+PHBhdHRlcm5GaWxsIHBhdHRlcm5UeXBlPSJzb2xpZCI+PGZnQ29sb3IgcmdiPSJGRkZGRkYwMCIvPjxiZ0NvbG9yIGluZGV4ZWQ9IjY0Ii8+PC9wYXR0ZXJuRmlsbD48L2ZpbGw+PC9maWxscz48Ym9yZGVycyBjb3VudD0iMiI+PGJvcmRlcj48bGVmdC8+PHJpZ2h0Lz48dG9wLz48Ym90dG9tLz48ZGlhZ29uYWwvPjwvYm9yZGVyPjxib3JkZXI+PGxlZnQgc3R5bGU9InRoaW4iPjxjb2xvciBpbmRleGVkPSI2NCIvPjwvbGVmdD48cmlnaHQgc3R5bGU9InRoaW4iPjxjb2xvciBpbmRleGVkPSI2NCIvPjwvcmlnaHQ+PHRvcCBzdHlsZT0idGhpbiI+PGNvbG9yIGluZGV4ZWQ9IjY0Ii8+PC90b3A+PGJvdHRvbSBzdHlsZT0idGhpbiI+PGNvbG9yIGluZGV4ZWQ9IjY0Ii8+PC9ib3R0b20+PGRpYWdvbmFsLz48L2JvcmRlcj48L2JvcmRlcnM+PGNlbGxTdHlsZVhmcyBjb3VudD0iMSI+PHhmIG51bUZtdElkPSIwIiBmb250SWQ9IjAiIGZpbGxJZD0iMCIgYm9yZGVySWQ9IjAiPjxhbGlnbm1lbnQgdmVydGljYWw9ImNlbnRlciIvPjwveGY+PC9jZWxsU3R5bGVYZnM+PGNlbGxYZnMgY291bnQ9IjE1Ij48eGYgbnVtRm10SWQ9IjAiIGZvbnRJZD0iMCIgZmlsbElkPSIwIiBib3JkZXJJZD0iMCIgeGZJZD0iMCI+PGFsaWdubWVudCB2ZXJ0aWNhbD0iY2VudGVyIi8+PC94Zj48eGYgbnVtRm10SWQ9IjAiIGZvbnRJZD0iMiIgZmlsbElkPSIwIiBib3JkZXJJZD0iMSIgeGZJZD0iMCIgYXBwbHlGb250PSIxIiBhcHBseUJvcmRlcj0iMSIgYXBwbHlBbGlnbm1lbnQ9IjEiPjxhbGlnbm1lbnQgaG9yaXpvbnRhbD0iY2VudGVyIiB2ZXJ0aWNhbD0iY2VudGVyIiB3cmFwVGV4dD0iMSIvPjwveGY+PHhmIG51bUZtdElkPSIwIiBmb250SWQ9IjIiIGZpbGxJZD0iMiIgYm9yZGVySWQ9IjEiIHhmSWQ9IjAiIGFwcGx5Rm9udD0iMSIgYXBwbHlGaWxsPSIxIiBhcHBseUJvcmRlcj0iMSIgYXBwbHlBbGlnbm1lbnQ9IjEiPjxhbGlnbm1lbnQgaG9yaXpvbnRhbD0iY2VudGVyIiB2ZXJ0aWNhbD0iY2VudGVyIi8+PC94Zj48eGYgbnVtRm10SWQ9IjAiIGZvbnRJZD0iMyIgZmlsbElkPSIwIiBib3JkZXJJZD0iMCIgeGZJZD0iMCIgYXBwbHlGb250PSIxIj48YWxpZ25tZW50IHZlcnRpY2FsPSJjZW50ZXIiLz48L3hmPjx4ZiBudW1GbXRJZD0iNDkiIGZvbnRJZD0iMiIgZmlsbElkPSIyIiBib3JkZXJJZD0iMSIgeGZJZD0iMCIgYXBwbHlOdW1iZXJGb3JtYXQ9IjEiIGFwcGx5Rm9udD0iMSIgYXBwbHlGaWxsPSIxIiBhcHBseUJvcmRlcj0iMSIgYXBwbHlBbGlnbm1lbnQ9IjEiPjxhbGlnbm1lbnQgaG9yaXpvbnRhbD0iY2VudGVyIiB2ZXJ0aWNhbD0iY2VudGVyIiB3cmFwVGV4dD0iMSIvPjwveGY+PHhmIG51bUZtdElkPSI0OSIgZm9udElkPSIzIiBmaWxsSWQ9IjAiIGJvcmRlcklkPSIwIiB4ZklkPSIwIiBhcHBseU51bWJlckZvcm1hdD0iMSIgYXBwbHlGb250PSIxIj48YWxpZ25tZW50IHZlcnRpY2FsPSJjZW50ZXIiLz48L3hmPjx4ZiBudW1GbXRJZD0iMCIgZm9udElkPSIzIiBmaWxsSWQ9IjAiIGJvcmRlcklkPSIwIiB4ZklkPSIwIiBhcHBseUZvbnQ9IjEiIGFwcGx5QWxpZ25tZW50PSIxIj48YWxpZ25tZW50IGhvcml6b250YWw9ImNlbnRlciIgdmVydGljYWw9ImNlbnRlciIvPjwveGY+PHhmIG51bUZtdElkPSIwIiBmb250SWQ9IjIiIGZpbGxJZD0iMiIgYm9yZGVySWQ9IjEiIHhmSWQ9IjAiIGFwcGx5Rm9udD0iMSIgYXBwbHlGaWxsPSIxIiBhcHBseUJvcmRlcj0iMSIgYXBwbHlBbGlnbm1lbnQ9IjEiPjxhbGlnbm1lbnQgaG9yaXpvbnRhbD0iY2VudGVyIiB2ZXJ0aWNhbD0iY2VudGVyIi8+PC94Zj48eGYgbnVtRm10SWQ9IjAiIGZvbnRJZD0iNyIgZmlsbElkPSIwIiBib3JkZXJJZD0iMSIgeGZJZD0iMCIgYXBwbHlGb250PSIxIiBhcHBseUJvcmRlcj0iMSI+PGFsaWdubWVudCB2ZXJ0aWNhbD0iY2VudGVyIi8+PC94Zj48eGYgbnVtRm10SWQ9IjAiIGZvbnRJZD0iMiIgZmlsbElkPSIwIiBib3JkZXJJZD0iMSIgeGZJZD0iMCIgYXBwbHlGb250PSIxIiBhcHBseUJvcmRlcj0iMSI+PGFsaWdubWVudCB2ZXJ0aWNhbD0iY2VudGVyIi8+PC94Zj48eGYgbnVtRm10SWQ9IjAiIGZvbnRJZD0iMiIgZmlsbElkPSIwIiBib3JkZXJJZD0iMSIgeGZJZD0iMCIgYXBwbHlGb250PSIxIiBhcHBseUJvcmRlcj0iMSIgYXBwbHlBbGlnbm1lbnQ9IjEiPjxhbGlnbm1lbnQgdmVydGljYWw9ImNlbnRlciIgd3JhcFRleHQ9IjEiLz48L3hmPjx4ZiBudW1GbXRJZD0iNDkiIGZvbnRJZD0iMiIgZmlsbElkPSIwIiBib3JkZXJJZD0iMSIgeGZJZD0iMCIgYXBwbHlOdW1iZXJGb3JtYXQ9IjEiIGFwcGx5Rm9udD0iMSIgYXBwbHlCb3JkZXI9IjEiPjxhbGlnbm1lbnQgdmVydGljYWw9ImNlbnRlciIvPjwveGY+PHhmIG51bUZtdElkPSI0OSIgZm9udElkPSIyIiBmaWxsSWQ9IjAiIGJvcmRlcklkPSIxIiB4ZklkPSIwIiBhcHBseU51bWJlckZvcm1hdD0iMSIgYXBwbHlGb250PSIxIiBhcHBseUJvcmRlcj0iMSIgYXBwbHlBbGlnbm1lbnQ9IjEiPjxhbGlnbm1lbnQgdmVydGljYWw9ImNlbnRlciIgd3JhcFRleHQ9IjEiLz48L3hmPjx4ZiBudW1GbXRJZD0iMTc2IiBmb250SWQ9IjciIGZpbGxJZD0iMiIgYm9yZGVySWQ9IjEiIHhmSWQ9IjAiIGFwcGx5TnVtYmVyRm9ybWF0PSIxIiBhcHBseUZvbnQ9IjEiIGFwcGx5RmlsbD0iMSIgYXBwbHlCb3JkZXI9IjEiIGFwcGx5QWxpZ25tZW50PSIxIj48YWxpZ25tZW50IGhvcml6b250YWw9ImxlZnQiIHZlcnRpY2FsPSJjZW50ZXIiIHdyYXBUZXh0PSIxIi8+PC94Zj48eGYgbnVtRm10SWQ9IjQ5IiBmb250SWQ9IjciIGZpbGxJZD0iMiIgYm9yZGVySWQ9IjEiIHhmSWQ9IjAiIGFwcGx5TnVtYmVyRm9ybWF0PSIxIiBhcHBseUZvbnQ9IjEiIGFwcGx5RmlsbD0iMSIgYXBwbHlCb3JkZXI9IjEiIGFwcGx5QWxpZ25tZW50PSIxIj48YWxpZ25tZW50IGhvcml6b250YWw9ImNlbnRlciIgdmVydGljYWw9ImNlbnRlciIgd3JhcFRleHQ9IjEiLz48L3hmPjwvY2VsbFhmcz48Y2VsbFN0eWxlcyBjb3VudD0iMSI+PGNlbGxTdHlsZSBuYW1lPSLtkZzspIAiIHhmSWQ9IjAiIGJ1aWx0aW5JZD0iMCIvPjwvY2VsbFN0eWxlcz48ZHhmcyBjb3VudD0iMCIvPjx0YWJsZVN0eWxlcyBjb3VudD0iMCIgZGVmYXVsdFRhYmxlU3R5bGU9IlRhYmxlU3R5bGVNZWRpdW0yIiBkZWZhdWx0UGl2b3RTdHlsZT0iUGl2b3RTdHlsZUxpZ2h0MTYiLz48ZXh0THN0PjxleHQgdXJpPSJ7RUI3OURFRjItODBCOC00M2U1LTk1QkQtNTRDQkRERjkwMjBDfSIgeG1sbnM6eDE0PSJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL29mZmljZS9zcHJlYWRzaGVldG1sLzIwMDkvOS9tYWluIj48eDE0OnNsaWNlclN0eWxlcyBkZWZhdWx0U2xpY2VyU3R5bGU9IlNsaWNlclN0eWxlTGlnaHQxIi8+PC9leHQ+PGV4dCB1cmk9Ins5MjYwQTUxMC1GMzAxLTQ2YTgtODYzNS1GNTEyRDY0QkU1RjV9IiB4bWxuczp4MTU9Imh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vb2ZmaWNlL3NwcmVhZHNoZWV0bWwvMjAxMC8xMS9tYWluIj48eDE1OnRpbWVsaW5lU3R5bGVzIGRlZmF1bHRUaW1lbGluZVN0eWxlPSJUaW1lU2xpY2VyU3R5bGVMaWdodDEiLz48L2V4dD48L2V4dExzdD48L3N0eWxlU2hlZXQ+", "xl/sharedStrings.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPHNzdCB4bWxucz0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL3NwcmVhZHNoZWV0bWwvMjAwNi9tYWluIiBjb3VudD0iMjkiIHVuaXF1ZUNvdW50PSIyMiI+PHNpPjx0Puuwm+uKlCDrtoQ8L3Q+PC9zaT48c2k+PHQ+67Cw7Iah7IOB7ZKI7KCV67O0PC90Pjwvc2k+PHNpPjxyPjx0PuyInOuyiDwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjwvc2k+PHNpPjxyPjx0Pu2VuOuTnO2PsOuyiO2YuDwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjwvc2k+PHNpPjxyPjx0IHhtbDpzcGFjZT0icHJlc2VydmUiPuyXsOudveyymA0KPC90Pjwvcj48cj48clByPjxzeiB2YWw9IjkiLz48Y29sb3IgcmdiPSJGRkZGMDAwMCIvPjxyRm9udCB2YWw9Iuq1tOumvCIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L3JQcj48dD4o7ZWE7IiY7J6F66ClIOyVhOuLmCk8L3Q+PC9yPjwvc2k+PHNpPjxyPjx0PuyasO2OuOuyiO2YuDwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjwvc2k+PHNpPjxyPjx0PuyjvOyGjDwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjwvc2k+PHNpPjxyPjx0PuyDgeyEuOyjvOyGjDwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjwvc2k+PHNpPjxyPjx0PuusvO2SiOuqhTwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjxyPjxyUHI+PHN6IHZhbD0iOSIvPjxjb2xvciBpbmRleGVkPSI4Ii8+PHJGb250IHZhbD0i6rW066a8Ii8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0IHhtbDpzcGFjZT0icHJlc2VydmUiPg0KPC90Pjwvcj48cj48clByPjxzeiB2YWw9IjkiLz48Y29sb3IgaW5kZXhlZD0iMTAiLz48ckZvbnQgdmFsPSLqtbTrprwiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PC9yUHI+PHQ+KDEw6riA7J6QIOydtO2VmCk8L3Q+PC9yPjwvc2k+PHNpPjx0PuuhnOyngOyVhOydtDwvdD48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjx0PuyEnOyauO2KueuzhOyLnCDshLHrtoHqtawg7ISg7J6g66GcNeq4uCA0ODwvdD48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjx0PuuPhOuhnOuqhSDrmJDripQg64+Z66qFIOyjvOyGjCDsnbTtm4Qg6rG066y866qFIOuwjyDrj5kv7Zi47IiYPC90PjxwaG9uZXRpY1ByIGZvbnRJZD0iMSIgdHlwZT0ibm9Db252ZXJzaW9uIi8+PC9zaT48c2k+PHQ+QjwvdD48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjx0PuydmOulmDwvdD48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjx0PuqzteuPme2YhOq0gCDruYTrsojsnYAg67OEMTIzNOyDtTwvdD48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjx0PjAxMDEyMzQwMDAxPC90PjxwaG9uZXRpY1ByIGZvbnRJZD0iMSIgdHlwZT0ibm9Db252ZXJzaW9uIi8+PC9zaT48c2k+PHQ+MDEwMTIzNDAwMDI8L3Q+PHBob25ldGljUHIgZm9udElkPSIxIiB0eXBlPSJub0NvbnZlcnNpb24iLz48L3NpPjxzaT48dD4wMjgzOTwvdD48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjxyPjx0PuuwleyKpO2DgOyehTwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L3JQcj48dCB4bWw6c3BhY2U9InByZXNlcnZlIj4qDQo8L3Q+PC9yPjxyPjxyUHI+PHN6IHZhbD0iOSIvPjxjb2xvciByZ2I9IkZGRkYwMDAwIi8+PHJGb250IHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIyIi8+PC9yUHI+PHQ+WCA6IDUwMGcvODBjbSDsnbTtlZgNClMgOiAya2cvNjBjbSDsnbTtlZgsIDJrZy84MGNt7J207ZWYKO2OuOydmOygkO2DneuwsCkNCkEgOiA1a2cvODBjbSDsnbTtlZgsIDJrZy84MGNt7J207ZWYLDNrZy84MGNt7J207ZWYDQpCIDogMTBrZy8xMDBjbSDsnbTtlZgsNWtnLzEwMGNt7J207ZWYLDZrZy8xMDBjbeydtO2VmA0KQyA6IDE1a2cvMTIwY20g7J207ZWYICwxMGtnLzEyMGNt7J207ZWYLDIwa2cvMTIwY23snbTtlZgsOGtnLzEyMGNt7J207ZWYDQpEIDogMjBrZy8xNDBjbSDsnbTtlZgsMTVrZy8xNDBjbQ0KRSA6IDIwa2cvMTYwY20g7J207ZWYLDE1a2cvMTQwY23snbTtlZgo64yA7ZWc7Ya17Jq064uk65+JKQ0KRiA6IDI1a2cvMTkwY20g7J207ZWYPC90Pjwvcj48cGhvbmV0aWNQciBmb250SWQ9IjEiIHR5cGU9Im5vQ29udmVyc2lvbiIvPjwvc2k+PHNpPjxyPjx0PuygnO2SiOuLqOqwgDwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L3JQcj48dD4qDQoo66y87ZKI6rCA6rKp7J2EIDHrp4zsm5Dri6jsnITroZwg7J6F66ClKTwvdD48L3I+PC9zaT48c2k+PHI+PHQgeG1sOnNwYWNlPSJwcmVzZXJ2ZSI+7JqU7LKt7IKs7ZWtDQo8L3Q+PC9yPjxyPjxyUHI+PHN6IHZhbD0iOSIvPjxjb2xvciBpbmRleGVkPSIxMCIvPjxyRm9udCB2YWw9IuunkeydgCDqs6DrlJUiLz48ZmFtaWx5IHZhbD0iMyIvPjxjaGFyc2V0IHZhbD0iMTI5Ii8+PC9yUHI+PHQ+7Yq57IiY66y47J6Q64qUIOyYiOyVheuTseuhnSDsi5wg7JeF66Gc65Oc6rCAIOu2iOqwgO2VmOyYpOuLiCDtlZzquIAs7JiB66y4LOyIq+yekOuhnOunjCDsnoXroKXtlbTso7zshLjsmpQuDQozMOq4gOyekCDsnbTtlZg8L3Q+PC9yPjxwaG9uZXRpY1ByIGZvbnRJZD0iMSIgdHlwZT0ibm9Db252ZXJzaW9uIi8+PC9zaT48c2k+PHI+PHQ+7J2066aEPC90Pjwvcj48cj48clByPjxzeiB2YWw9IjkiLz48Y29sb3IgaW5kZXhlZD0iMTAiLz48ckZvbnQgdmFsPSLrp5HsnYAg6rOg65SVIi8+PGZhbWlseSB2YWw9IjMiLz48Y2hhcnNldCB2YWw9IjEyOSIvPjwvclByPjx0Pio8L3Q+PC9yPjxyPjxyUHI+PHN6IHZhbD0iOSIvPjxjb2xvciBpbmRleGVkPSI4Ii8+PHJGb250IHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L3JQcj48dCB4bWw6c3BhY2U9InByZXNlcnZlIj4NCjwvdD48L3I+PHI+PHJQcj48c3ogdmFsPSI5Ii8+PGNvbG9yIGluZGV4ZWQ9IjEwIi8+PHJGb250IHZhbD0i66eR7J2AIOqzoOuUlSIvPjxmYW1pbHkgdmFsPSIzIi8+PGNoYXJzZXQgdmFsPSIxMjkiLz48L3JQcj48dD4o7ZWc6riAwqAxMOyekCzsmIHrrLggMjDsnpAg7J207ZWY66GcIOyeheugpe2VtOyjvOyEuOyalCk8L3Q+PC9yPjxwaG9uZXRpY1ByIGZvbnRJZD0iMSIgdHlwZT0ibm9Db252ZXJzaW9uIi8+PC9zaT48L3NzdD4=", "xl/worksheets/_rels/sheet1.xml.rels": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPFJlbGF0aW9uc2hpcHMgeG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9wYWNrYWdlLzIwMDYvcmVsYXRpb25zaGlwcyI+PFJlbGF0aW9uc2hpcCBJZD0icklkMSIgVHlwZT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29mZmljZURvY3VtZW50LzIwMDYvcmVsYXRpb25zaGlwcy9wcmludGVyU2V0dGluZ3MiIFRhcmdldD0iLi4vcHJpbnRlclNldHRpbmdzL3ByaW50ZXJTZXR0aW5nczEuYmluIi8+PC9SZWxhdGlvbnNoaXBzPg==", "xl/printerSettings/printerSettings1.bin": "UwBhAG0AcwB1AG4AZwAgAFMATAAtAFQAMQA2ADcAMABGAFcAIABTAGUAcgBpAGUAcwAgAFsANgBBADQAAAAAAAEEAwbcALgJA68AAgEACQCaCzQIZAABAA8AWAICAAEAWAIDAAEAQQA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAABAAAAAgAAAAEAAAD/////R0lTNAAAAAAAAAAAAAAAAERJTlUiAJgB9APEBbatK0EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQAAAAEAAAAKAAEAAAAAAAEAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACYAQAAU01USgAAAAAQAIgBewBCADcAMQA2ADYAMQBGADQALQBBADQARABDAC0ANAAzAEQARgAtAEIAQwAxADYALQAzADkARAAzADMANwBEADEANQBBADkANQB9AAAASW5wdXRCaW4ATWFpbgBSRVNETEwAVW5pcmVzRExMAFBhcGVyU2l6ZQBBNABQYWdlQm9yZGVybGVzcwBOb25lAE1lZGlhVHlwZQBTVEFOREFSRABPdXRwdXRCaW4ARmFjZVVwAEpvYlBhZ2VPcmRlcgBSZXZlcnNlAE9yaWVudGF0aW9uAFBPUlRSQUlUAFBhZ2VPdXRwdXRRdWFsaXR5AE5vcm1hbABDb2xsYXRlAE9OAEpvYk5VcFByZXNlbnRhdGlvbkRpcmVjdGlvbgBSaWdodEJvdHRvbQBSZXNvbHV0aW9uAERQSTYwMHg2MDAAQ29sb3JNb2RlAENvbG9yAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADEBQAAVjRETQEAAAAAAAAAVlBQScjQ91UoAAAArAUAALgFAAAAAAAAhAUAAAkAAAAMAAAAuAAAAG4AcwAwADAAMAAwAAAAAAAAAAAAAAAAAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwB3AGkAbgBkAG8AdwBzAC8AMgAwADEAOAAvADAANAAvAHAAcgBpAG4AdABpAG4AZwAvAHAAcgBpAG4AdABzAGMAaABlAG0AYQBrAGUAeQB3AG8AcgBkAHMALwBJAHAAcAAAALQAAABwAHMAZgAAAAAAAAAAAAAAAAAAAAAAAABoAHQAdABwADoALwAvAHMAYwBoAGUAbQBhAHMALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AdwBpAG4AZABvAHcAcwAvADIAMAAwADMALwAwADgALwBwAHIAaQBuAHQAaQBuAGcALwBwAHIAaQBuAHQAcwBjAGgAZQBtAGEAZgByAGEAbQBlAHcAbwByAGsAAAAAALQAAABwAHMAZgAyAAAAAAAAAAAAAAAAAAAAAABoAHQAdABwADoALwAvAHMAYwBoAGUAbQBhAHMALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AdwBpAG4AZABvAHcAcwAvADIAMAAxADMALwAxADIALwBwAHIAaQBuAHQAaQBuAGcALwBwAHIAaQBuAHQAcwBjAGgAZQBtAGEAZgByAGEAbQBlAHcAbwByAGsAMgAAALAAAABwAHMAawAAAAAAAAAAAAAAAAAAAAAAAABoAHQAdABwADoALwAvAHMAYwBoAGUAbQBhAHMALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AdwBpAG4AZABvAHcAcwAvADIAMAAwADMALwAwADgALwBwAHIAaQBuAHQAaQBuAGcALwBwAHIAaQBuAHQAcwBjAGgAZQBtAGEAawBlAHkAdwBvAHIAZABzAAAAuAAAAHAAcwBrADEAMQAAAAAAAAAAAAAAAAAAAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwB3AGkAbgBkAG8AdwBzAC8AMgAwADEAMwAvADAANQAvAHAAcgBpAG4AdABpAG4AZwAvAHAAcgBpAG4AdABzAGMAaABlAG0AYQBrAGUAeQB3AG8AcgBkAHMAdgAxADEAAAAAALgAAABwAHMAawAxADIAAAAAAAAAAAAAAAAAAABoAHQAdABwADoALwAvAHMAYwBoAGUAbQBhAHMALgBtAGkAYwByAG8AcwBvAGYAdAAuAGMAbwBtAC8AdwBpAG4AZABvAHcAcwAvADIAMAAxADMALwAxADIALwBwAHIAaQBuAHQAaQBuAGcALwBwAHIAaQBuAHQAcwBjAGgAZQBtAGEAawBlAHkAdwBvAHIAZABzAHYAMQAyAAAAAABoAAAAeABtAGwAAAAAAAAAAAAAAAAAAAAAAAAAaAB0AHQAcAA6AC8ALwB3AHcAdwAuAHcAMwAuAG8AcgBnAC8AWABNAEwALwAxADkAOQA4AC8AbgBhAG0AZQBzAHAAYQBjAGUAAAAAAGAAAAB4AHMAZAAAAAAAAAAAAAAAAAAAAAAAAABoAHQAdABwADoALwAvAHcAdwB3AC4AdwAzAC4AbwByAGcALwAyADAAMAAxAC8AWABNAEwAUwBjAGgAZQBtAGEAAAAAAHAAAAB4AHMAaQAAAAAAAAAAAAAAAAAAAAAAAABoAHQAdABwADoALwAvAHcAdwB3AC4AdwAzAC4AbwByAGcALwAyADAAMAAxAC8AWABNAEwAUwBjAGgAZQBtAGEALQBpAG4AcwB0AGEAbgBjAGUAAAAMAAAAAAAAAAwAAAAMAAAAAAAAAAwAAAA=", "docProps/core.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPGNwOmNvcmVQcm9wZXJ0aWVzIHhtbG5zOmNwPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2FnZS8yMDA2L21ldGFkYXRhL2NvcmUtcHJvcGVydGllcyIgeG1sbnM6ZGM9Imh0dHA6Ly9wdXJsLm9yZy9kYy9lbGVtZW50cy8xLjEvIiB4bWxuczpkY3Rlcm1zPSJodHRwOi8vcHVybC5vcmcvZGMvdGVybXMvIiB4bWxuczpkY21pdHlwZT0iaHR0cDovL3B1cmwub3JnL2RjL2RjbWl0eXBlLyIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSI+PGRjOmNyZWF0b3I+VXNlcjwvZGM6Y3JlYXRvcj48Y3A6bGFzdE1vZGlmaWVkQnk+7KCVIOyGjOycpDwvY3A6bGFzdE1vZGlmaWVkQnk+PGRjdGVybXM6Y3JlYXRlZCB4c2k6dHlwZT0iZGN0ZXJtczpXM0NEVEYiPjIwMjEtMDQtMDhUMDc6MTM6MDZaPC9kY3Rlcm1zOmNyZWF0ZWQ+PGRjdGVybXM6bW9kaWZpZWQgeHNpOnR5cGU9ImRjdGVybXM6VzNDRFRGIj4yMDI2LTA4LTE4VDA2OjEzOjE5WjwvZGN0ZXJtczptb2RpZmllZD48L2NwOmNvcmVQcm9wZXJ0aWVzPg==", "docProps/app.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPFByb3BlcnRpZXMgeG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L2V4dGVuZGVkLXByb3BlcnRpZXMiIHhtbG5zOnZ0PSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvb2ZmaWNlRG9jdW1lbnQvMjAwNi9kb2NQcm9wc1ZUeXBlcyI+PEFwcGxpY2F0aW9uPk1pY3Jvc29mdCBFeGNlbDwvQXBwbGljYXRpb24+PERvY1NlY3VyaXR5PjA8L0RvY1NlY3VyaXR5PjxTY2FsZUNyb3A+ZmFsc2U8L1NjYWxlQ3JvcD48SGVhZGluZ1BhaXJzPjx2dDp2ZWN0b3Igc2l6ZT0iMiIgYmFzZVR5cGU9InZhcmlhbnQiPjx2dDp2YXJpYW50Pjx2dDpscHN0cj7sm4ztgazsi5ztirg8L3Z0Omxwc3RyPjwvdnQ6dmFyaWFudD48dnQ6dmFyaWFudD48dnQ6aTQ+MTwvdnQ6aTQ+PC92dDp2YXJpYW50PjwvdnQ6dmVjdG9yPjwvSGVhZGluZ1BhaXJzPjxUaXRsZXNPZlBhcnRzPjx2dDp2ZWN0b3Igc2l6ZT0iMSIgYmFzZVR5cGU9Imxwc3RyIj48dnQ6bHBzdHI+c2FtcGxlPC92dDpscHN0cj48L3Z0OnZlY3Rvcj48L1RpdGxlc09mUGFydHM+PExpbmtzVXBUb0RhdGU+ZmFsc2U8L0xpbmtzVXBUb0RhdGU+PFNoYXJlZERvYz5mYWxzZTwvU2hhcmVkRG9jPjxIeXBlcmxpbmtzQ2hhbmdlZD5mYWxzZTwvSHlwZXJsaW5rc0NoYW5nZWQ+PEFwcFZlcnNpb24+MTYuMDMwMDwvQXBwVmVyc2lvbj48L1Byb3BlcnRpZXM+", "docProps/custom.xml": "PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pg0KPFByb3BlcnRpZXMgeG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L2N1c3RvbS1wcm9wZXJ0aWVzIiB4bWxuczp2dD0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29mZmljZURvY3VtZW50LzIwMDYvZG9jUHJvcHNWVHlwZXMiPjxwcm9wZXJ0eSBmbXRpZD0ie0Q1Q0RENTA1LTJFOUMtMTAxQi05Mzk3LTA4MDAyQjJDRjlBRX0iIHBpZD0iMiIgbmFtZT0iTVNJUF9MYWJlbF84NDBkYzQ4My0wZDA2LTQzYmEtYjM2Zi03MzQ5NzlmODgxMzBfRW5hYmxlZCI+PHZ0Omxwd3N0cj50cnVlPC92dDpscHdzdHI+PC9wcm9wZXJ0eT48cHJvcGVydHkgZm10aWQ9IntENUNERDUwNS0yRTlDLTEwMUItOTM5Ny0wODAwMkIyQ0Y5QUV9IiBwaWQ9IjMiIG5hbWU9Ik1TSVBfTGFiZWxfODQwZGM0ODMtMGQwNi00M2JhLWIzNmYtNzM0OTc5Zjg4MTMwX1NldERhdGUiPjx2dDpscHdzdHI+MjAyNC0wMy0xMVQwMzo0NToxNVo8L3Z0Omxwd3N0cj48L3Byb3BlcnR5Pjxwcm9wZXJ0eSBmbXRpZD0ie0Q1Q0RENTA1LTJFOUMtMTAxQi05Mzk3LTA4MDAyQjJDRjlBRX0iIHBpZD0iNCIgbmFtZT0iTVNJUF9MYWJlbF84NDBkYzQ4My0wZDA2LTQzYmEtYjM2Zi03MzQ5NzlmODgxMzBfTWV0aG9kIj48dnQ6bHB3c3RyPlByaXZpbGVnZWQ8L3Z0Omxwd3N0cj48L3Byb3BlcnR5Pjxwcm9wZXJ0eSBmbXRpZD0ie0Q1Q0RENTA1LTJFOUMtMTAxQi05Mzk3LTA4MDAyQjJDRjlBRX0iIHBpZD0iNSIgbmFtZT0iTVNJUF9MYWJlbF84NDBkYzQ4My0wZDA2LTQzYmEtYjM2Zi03MzQ5NzlmODgxMzBfTmFtZSI+PHZ0Omxwd3N0cj7qs7XsmqnrrLjshJw8L3Z0Omxwd3N0cj48L3Byb3BlcnR5Pjxwcm9wZXJ0eSBmbXRpZD0ie0Q1Q0RENTA1LTJFOUMtMTAxQi05Mzk3LTA4MDAyQjJDRjlBRX0iIHBpZD0iNiIgbmFtZT0iTVNJUF9MYWJlbF84NDBkYzQ4My0wZDA2LTQzYmEtYjM2Zi03MzQ5NzlmODgxMzBfU2l0ZUlkIj48dnQ6bHB3c3RyPjAwYzA1MDUwLTg3NzktNDE4ZS1iOWI5LWRjZTMzNWUwMTQ3YTwvdnQ6bHB3c3RyPjwvcHJvcGVydHk+PHByb3BlcnR5IGZtdGlkPSJ7RDVDREQ1MDUtMkU5Qy0xMDFCLTkzOTctMDgwMDJCMkNGOUFFfSIgcGlkPSI3IiBuYW1lPSJNU0lQX0xhYmVsXzg0MGRjNDgzLTBkMDYtNDNiYS1iMzZmLTczNDk3OWY4ODEzMF9BY3Rpb25JZCI+PHZ0Omxwd3N0cj5iZDk4NTBmOS03OWIwLTQwYjMtYTM4MS1hMWZiOWM4Mjg4MGY8L3Z0Omxwd3N0cj48L3Byb3BlcnR5Pjxwcm9wZXJ0eSBmbXRpZD0ie0Q1Q0RENTA1LTJFOUMtMTAxQi05Mzk3LTA4MDAyQjJDRjlBRX0iIHBpZD0iOCIgbmFtZT0iTVNJUF9MYWJlbF84NDBkYzQ4My0wZDA2LTQzYmEtYjM2Zi03MzQ5NzlmODgxMzBfQ29udGVudEJpdHMiPjx2dDpscHdzdHI+MDwvdnQ6bHB3c3RyPjwvcHJvcGVydHk+PC9Qcm9wZXJ0aWVzPg=="};
+/* 로지아이 다량접수 양식 생성: 템플릿 파트를 그대로 쓰고 sheet1.xml만 새로 써서 무압축 zip(xlsx)으로 묶음 */
+const CRC_T=(()=>{const t=new Int32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c;}return t;})();
+function crc32(u8){let c=-1;for(let i=0;i<u8.length;i++)c=CRC_T[(c^u8[i])&255]^(c>>>8);return (c^-1)>>>0;}
+function b64ToU8(b){const s=atob(b);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;}
+function strU8(s){return new TextEncoder().encode(s);}
+function xmlEsc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function zipStored(entries){ // entries: [{name, data:Uint8Array}]
+  const parts=[],cd=[];let off=0;
+  const le16=n=>[n&255,(n>>8)&255], le32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  for(const e of entries){
+    const name=strU8(e.name), crc=crc32(e.data), sz=e.data.length;
+    const lh=new Uint8Array([...le32(0x04034b50),...le16(20),...le16(0x800),...le16(0),...le16(0),...le16(0x21),...le32(crc),...le32(sz),...le32(sz),...le16(name.length),...le16(0)]);
+    parts.push(lh,name,e.data);
+    cd.push(new Uint8Array([...le32(0x02014b50),...le16(20),...le16(20),...le16(0x800),...le16(0),...le16(0),...le16(0x21),...le32(crc),...le32(sz),...le32(sz),...le16(name.length),...le16(0),...le16(0),...le16(0),...le16(0),...le32(0),...le32(off)]),name);
+    off+=lh.length+name.length+sz;
+  }
+  const cdStart=off; let cdLen=0; cd.forEach(x=>cdLen+=x.length);
+  const eocd=new Uint8Array([...le32(0x06054b50),...le16(0),...le16(0),...le16(entries.length),...le16(entries.length),...le32(cdLen),...le32(cdStart),...le16(0)]);
+  const all=[...parts,...cd,eocd]; let total=0; all.forEach(x=>total+=x.length);
+  const out=new Uint8Array(total); let p=0; for(const x of all){out.set(x,p);p+=x.length;}
+  return out;
+}
+/* rows: [{name,phone,zip,addr,addr2,box,item,price,memo}] */
+function buildLogiXlsx(rows){
+  const clean=s=>String(s??'').replace(/[^가-힣a-zA-Z0-9 ]/g,'').trim();
+  const col=(r,c,s,v,str)=>v===''||v==null?`<c r="${c}${r}" s="${s}"/>`:(str?`<c r="${c}${r}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`:`<c r="${c}${r}" s="${s}"><v>${v}</v></c>`);
+  let body='';
+  rows.forEach((m,i)=>{const r=i+3;
+    body+=`<row r="${r}" spans="1:11" s="6" customFormat="1">`
+      +col(r,'A',8,i+1)+col(r,'B',9,String(m.name).slice(0,10),1)+col(r,'C',12,String(m.phone).replace(/\D/g,''),1)+col(r,'D',9,'')
+      +col(r,'E',11,String(m.zip).replace(/\D/g,''),1)+col(r,'F',9,m.addr,1)+col(r,'G',9,m.addr2,1)+col(r,'H',1,m.box||'B',1)
+      +col(r,'I',9,String(m.item).slice(0,10),1)+col(r,'J',10,Math.max(1,Math.round((+m.price||0)/10000)))+col(r,'K',9,clean(m.memo).slice(0,30),1)
+      +`</row>`;
+  });
+  const last=rows.length+2;
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><dimension ref="A1:K${last}"/><sheetViews><sheetView tabSelected="1" workbookViewId="0"/></sheetViews><sheetFormatPr defaultColWidth="9.125" defaultRowHeight="13.5"/><cols><col min="1" max="1" width="5.125" style="3" customWidth="1"/><col min="2" max="2" width="11.75" style="3" customWidth="1"/><col min="3" max="3" width="13.875" style="5" customWidth="1"/><col min="4" max="4" width="9.125" style="5"/><col min="5" max="5" width="8.375" style="5" customWidth="1"/><col min="6" max="6" width="33.625" style="3" customWidth="1"/><col min="7" max="7" width="36.375" style="3" customWidth="1"/><col min="8" max="8" width="44" style="3" customWidth="1"/><col min="9" max="9" width="18.75" style="3" customWidth="1"/><col min="10" max="10" width="8.875" style="6" customWidth="1"/><col min="11" max="11" width="22.875" style="3" customWidth="1"/><col min="12" max="16384" width="9.125" style="3"/></cols><sheetData><row r="1" spans="1:11"><c r="A1" s="7" t="s"><v>0</v></c><c r="B1" s="7"/><c r="C1" s="7"/><c r="D1" s="7"/><c r="E1" s="7"/><c r="F1" s="7"/><c r="G1" s="7"/><c r="H1" s="7" t="s"><v>1</v></c><c r="I1" s="7"/><c r="J1" s="7"/><c r="K1" s="7"/></row><row r="2" spans="1:11" ht="120" customHeight="1"><c r="A2" s="2" t="s"><v>2</v></c><c r="B2" s="14" t="s"><v>21</v></c><c r="C2" s="4" t="s"><v>3</v></c><c r="D2" s="4" t="s"><v>4</v></c><c r="E2" s="4" t="s"><v>5</v></c><c r="F2" s="4" t="s"><v>6</v></c><c r="G2" s="4" t="s"><v>7</v></c><c r="H2" s="13" t="s"><v>18</v></c><c r="I2" s="4" t="s"><v>8</v></c><c r="J2" s="14" t="s"><v>19</v></c><c r="K2" s="14" t="s"><v>20</v></c></row>${body}</sheetData><mergeCells count="2"><mergeCell ref="A1:G1"/><mergeCell ref="H1:K1"/></mergeCells><pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="portrait" r:id="rId1"/></worksheet>`;
+  const entries=Object.keys(LOGI_FILES).map(n=>({name:n,data:b64ToU8(LOGI_FILES[n])}));
+  entries.push({name:'xl/worksheets/sheet1.xml',data:strU8(sheet)});
+  return zipStored(entries);
+}
+
+/* 브라우저에서 xlsx(zip) 읽기 — 라이브러리 없이. 반환: {rowNum:{A:'값',B:'값'}} */
+async function readXlsxRows(file){
+  const buf=new Uint8Array(await file.arrayBuffer()); const dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+  let eocd=-1; for(let i=buf.length-22;i>=Math.max(0,buf.length-70000);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+  if(eocd<0) throw new Error('엑셀(xlsx) 파일이 아니에요');
+  const n=dv.getUint16(eocd+10,true), cdOff=dv.getUint32(eocd+16,true);
+  const files={}; let p=cdOff; const td=new TextDecoder();
+  for(let k=0;k<n;k++){const method=dv.getUint16(p+10,true),csz=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lho=dv.getUint32(p+42,true);
+    files[td.decode(buf.subarray(p+46,p+46+nl))]={method,csz,lho}; p+=46+nl+el+cl;}
+  async function get(name){const f=files[name]; if(!f) return null; const nl=dv.getUint16(f.lho+26,true),el=dv.getUint16(f.lho+28,true); const start=f.lho+30+nl+el; const data=buf.slice(start,start+f.csz);
+    if(f.method===0) return td.decode(data);
+    const stream=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw')); return await new Response(stream).text();}
+  const unesc=s=>String(s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,'&');
+  const sst=[]; const ss=await get('xl/sharedStrings.xml'); if(ss){for(const m of ss.matchAll(/<si>([\s\S]*?)<\/si>/g)){sst.push([...m[1].matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]).join(''));}}
+  const names=Object.keys(files); const sheetName=names.find(x=>x==='xl/worksheets/sheet1.xml')||names.find(x=>/^xl\/worksheets\/sheet\d+\.xml$/.test(x));
+  if(!sheetName) throw new Error('시트를 찾을 수 없어요');
+  const xml=await get(sheetName); const rows={};
+  for(const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g)){const col=m[1],r=+m[2],attrs=m[3],inner=m[4]||''; let val='';
+    const t=(attrs.match(/\bt="(\w+)"/)||[])[1]; const v=(inner.match(/<v>([\s\S]*?)<\/v>/)||[])[1];
+    if(t==='s') val=sst[+v]||''; else if(t==='inlineStr'||t==='str'&&!v) val=[...inner.matchAll(/<t[^>]*>([\s\S]*?)<\/t>/g)].map(x=>x[1]).join(''); else val=v??'';
+    (rows[r]=rows[r]||{})[col]=unesc(val).trim();}
+  return rows;
+}
+/* 로지아이 예약현황: 헤더에서 열 찾기 → [{name,phone,addr,tracking}] */
+async function readLogiStatus(file){
+  const rows=await readXlsxRows(file); const nums=Object.keys(rows).map(Number).sort((a,b)=>a-b); if(!nums.length) return [];
+  let hdrRow=nums.find(r=>Object.values(rows[r]).some(v=>/운송장/.test(v)))||nums[0]; const hdr=rows[hdrRow];
+  const colOf=re=>Object.keys(hdr).find(c=>re.test(hdr[c].replace(/\s/g,'')));
+  const cT=colOf(/운송장/), cN=colOf(/받는분성함|받는분이름|수령인|받는사람/), cP=colOf(/받는분연락처|받는분전화|받는분휴대/), cA=colOf(/받는분주소/);
+  if(!cT||!cN) throw new Error('운송장번호·받는분성함 열을 찾지 못했어요');
+  return nums.filter(r=>r>hdrRow).map(r=>({name:rows[r][cN]||'',phone:cP?rows[r][cP]||'':'',addr:cA?rows[r][cA]||'':'',tracking:String(rows[r][cT]||'').replace(/\.0$/,'')})).filter(x=>x.tracking&&x.name);
+}
+
+</script>
+<script>
+const STANDALONE_BUILD=true; /* 독립 실행 파일에서는 true: 예시 데이터 없이 빈 상태로 시작 */
+const STEPS=[
+  {k:'order',t:'주문 접수',d:'1차 입금 확인 후 해외 쇼핑몰에 주문 완료'},
+  {k:'oversea',t:'해외 배송 중',d:'판매처 → 배송대행지로 이동 중'},
+  {k:'in',t:'배대지 입고',d:'배송대행지 창고 도착·검수 (해외배송비 확정 → 2차 정산 안내)'},
+  {k:'out',t:'배대지 출고',d:'합포장 후 국제 운송 접수'},
+  {k:'air',t:'항공 운송 중',d:'출발국 → 한국으로 이동 중'},
+  {k:'customs',t:'통관 진행 중',d:'인천 세관 통관 심사 중'},
+  {k:'arrived',t:'국내 입항',d:'통관 완료, 국내 택배 접수 준비'},
+  {k:'ship',t:'택배 배송 중',d:'국내 택배 출발 (운송장 번호 확인)'},
+  {k:'done',t:'배송 완료',d:'수령 확인'},
+];
+const CURR={JPY:{sym:'¥',name:'일본 엔',rate:9.5,limit:150},CNY:{sym:'元',name:'중국 위안',rate:200,limit:150},EUR:{sym:'€',name:'유로',rate:1550,limit:150},USD:{sym:'$',name:'미국 달러',rate:1420,limit:200}};
+const DOMESTIC={convenience:{t:'편의점택배',fee:2500,box:'S'},normal:{t:'일반택배',fee:4000,box:'B'}};
+const COURIERS=['CJ대한통운','우체국택배','롯데택배','한진택배','로젠택배'];
+const GS_TRACK=n=>'https://www.cvsnet.co.kr/invoice/tracking.do?invoice_no='+n;
+const TRACK={
+  'CJ대한통운':n=>'https://trace.cjlogistics.com/next/tracking.html?wblNo='+n,
+  '우체국택배':n=>'https://service.epost.go.kr/trace.RetrieveDomRigiTraceList.comm?sid1='+n,
+  '롯데택배':n=>'https://www.lotteglogis.com/home/reservation/tracking/linkView?InvNo='+n,
+  '한진택배':n=>'https://www.hanjin.com/kor/CMS/DeliveryMgr/WaybillResult.do?mCode=MN038&schLang=KR&wblnumText2='+n,
+  '로젠택배':n=>'https://www.ilogen.com/web/personal/trace/'+n,
+};
+const FONTS_BODY=[['Gowun Dodum','고운돋움 · 둥글고 단정'],['IBM Plex Sans KR','IBM 플렉스 · 또렷한 고딕'],['Nanum Gothic','나눔고딕 · 익숙한 기본'],['Gothic A1','고딕 A1 · 날렵한 고딕'],['Sunflower','선플라워 · 부드러운 고딕'],['Gaegu','개구 · 손글씨']];
+const FONTS_TITLE=[['Jua','주아 · 통통한 제목'],['Do Hyeon','도현 · 굵고 단단'],['Gaegu','개구 · 손글씨'],['Black Han Sans','검은고딕 · 아주 굵게'],['Sunflower','선플라워 · 얌전한 제목'],['Gowun Dodum','고운돋움 · 본문과 통일']];
+const OVMODES={equal:'1/n 균등',amount:'상품 금액 비례',qty:'수량 비례',weight:'직접 비율(가중치)'};
+const DEFAULT_SYNC='https://script.google.com/macros/s/AKfycbxF2GNQ1IRFZ_K0n2wPAQ0DrrVWLCNH-MtPRVnxKOGuS5Xet-wsJuWv37-qNwfRJx5xyA/exec';
+const DEFAULT_NOTICE='공구에 참여해주셔서 감사합니다 💛\n정산서 받으시면 내용 확인 후 입금 부탁드립니다.\n입금자명이 다르면 꼭 알려주세요 !\n\n[필독] 주문 취소·환불은 불가합니다.\n1. 계좌 이체만 가능합니다. 예약 이체 또한 불가합니다.\n2. 해외 배송 특성상 2-3주 소요됩니다.';
+const OLD_NOTICE='공구에 참여해주셔서 감사합니다 💛\n정산서 받으시면 내용 확인 후 입금 부탁드립니다.\n입금자명이 다르면 꼭 알려주세요 !\n[필독] 주문 취소·환불은 불가합니다.\n\n1. 계좌 이체만 가능합니다. 예약 이체 또한 불가합니다.\n2. 해외 배송 특성상 2-3주 소요됩니다.';
+const uid=(n=10)=>{let s='';while(s.length<n)s+=Math.random().toString(36).slice(2);return s.slice(0,n);};
+const now=()=>new Date().toISOString();
+const blankCart=()=>({ovTotal:0,ovMode:'equal'});
+const blankGroup=(title)=>({id:uid(6),title,nick:'',closed:false,closedAt:'',date:new Date().toISOString().slice(0,10),currency:'JPY',rate:9.5,step:-1,courier:'CJ대한통운',stage2Open:false,photos:[],history:[],members:[],carts:[blankCart()],form:blankForm()});
+const DEFAULT_RULES='해외배송비를 나누기 위해 현지 배송비 무료 기준까지 모집합니다. 인원이 차면 임의로 마감합니다.\n현지 배송비가 발생하면 인원수대로 나눕니다.\n현지 매장 재고품 공구입니다. 공식 홈페이지에서 재고를 확인하신 뒤 신청해 주세요. 댓글에 링크나 사진도 함께 부탁드립니다.\n구매 실패로 인한 환불은 가능합니다.\n개체 차이로 인한 교환·환불은 불가합니다.\n중도 하차는 불가합니다.\n현재 배송대행지 물량 증가로 배송이 지연될 수 있습니다. 공구의 특성을 이해하시는 분만 참여 부탁드립니다.\n2차 정산 안내 후 3일간 연락이 없으면 물품을 임의로 처분합니다.';
+const DEFAULT_EXTRA='가벼운 물품 위주로 받을 예정이며, 해외배송비는 물품당으로 나눕니다. (예: 무거운 유리컵·그릇 등은 어렵습니다)';
+const DEFAULT_WELCOME='{닉네임}의 모집글에 어서 오세요\n\n어떤 이득을 보려고 여는 모집이 아니라, 제 물건을 사는 김에 해외배송비를 함께 나누려고 모읍니다 :) 그래서 최대한 정가 그대로 운영하고, 문의는 언제든 환영하며, 투명하게 운영하는 것을 목표로 합니다.\n\n{닉네임}도 직구를 좋아하는 사람 중 한 명이니 따뜻하게 대해 주세요. 아무 대가 없이, 그저 제 것을 사기 위해 시간과 정성을 들여 운영하고 있어요.\n\n항상 행복하세요 🍀';
+const blankForm=()=>({open:false,openAt:'',deadline:'',intro:'',welcome:DEFAULT_WELCOME,store:'',itemsText:'',priceText:'',extra:DEFAULT_EXTRA,rules:DEFAULT_RULES,products:[],responses:[],marginKRW:10000,limitUSD:0});
+const blankProduct=()=>({id:uid(6),name:'',fx:0,price:0,photo:'',maxPer:1,minTarget:1,cap:0});
+const blankMember=()=>({id:uid(10),name:'',phone:'',zip:'',addr:'',addr2:'',memo:'',cvs:'',cvsAddr:'',cart:0,delivery:'normal',box:'',items:[{n:'',q:1,p:0,fx:0}],paid1:0,overseas:0,ovManual:false,paid2:0,tracking:'',packed:false,w:1});
+const baseState=()=>({seller:{owner:'',bank:'카카오뱅크',acct:'3333-26-3323521',holder:'박정은',siteUrl:'',syncUrl:DEFAULT_SYNC,fontBody:'Gowun Dodum',fontTitle:'Gaegu'},notice:DEFAULT_NOTICE,groups:[]});
+function seed(){
+  const d=days=>{const x=new Date();x.setDate(x.getDate()-days);return x.toISOString();};
+  const S=baseState();
+  S.groups=[
+    {id:'g1',title:'치이카와 11월 라방',nick:'',date:'2026-11-01',currency:'JPY',rate:9.5,step:3,courier:'CJ대한통운',stage2Open:true,photos:[],carts:[{ovTotal:25600,ovMode:'equal'}],
+      history:[{step:0,at:d(6),memo:'전원 1차 입금 확인, 메루카리 주문 완료'},{step:1,at:d(5),memo:'야마토 운송장 발급'},{step:2,at:d(2),memo:'배대지(도쿄) 입고 7박스 · 해외배송비 확정'},{step:3,at:d(0),memo:'합포장 후 EMS 접수'}],
+      members:[
+        {...blankMember(),id:'m1',name:'박정은',phone:'010-4561-7038',zip:'07990',addr:'서울 양천구 목동남로4길 6-23',addr2:'211동 407호',delivery:'normal',items:[{n:'우사하나 인형 키링 가챠',q:1,fx:790,p:7505},{n:'에몽이 얼굴 가챠',q:1,fx:526,p:4997}],paid1:12502,overseas:6400,paid2:10400,tracking:'6011-0989-9346',packed:true},
+        {...blankMember(),id:'m2',name:'박다현',phone:'010-2222-3333',zip:'07991',addr:'서울 양천구 목동동로 100',addr2:'101동 1001호',memo:'공동현관 비번 1234',delivery:'convenience',cvs:'GS25 목동중앙점',cvsAddr:'서울 양천구 목동동로 100',items:[{n:'먼작귀 마스코트 3색 볼펜',q:2,p:3500},{n:'먼작귀 열전사 데코스티커',q:1,p:14000}],paid1:21000,overseas:6400,paid2:0},
+        {...blankMember(),id:'m3',name:'김지영',phone:'010-5555-6666',items:[{n:'하치와레 파우치',q:1,p:18000}],paid1:0,overseas:6400},
+        {...blankMember(),id:'m4',name:'이다영',phone:'010-7777-8888',zip:'10380',addr:'경기 고양시 일산서구 중앙로 1500',addr2:'503호',items:[{n:'우사기 인형 S',q:1,p:22000},{n:'먼작귀 열전사 데코스티커',q:2,p:14000}],paid1:50000,overseas:6400,paid2:10400},
+      ]},
+    {id:'g2',title:'산리오 컵 (US)',nick:'',date:'2026-10-28',currency:'USD',rate:1420,step:5,courier:'우체국택배',stage2Open:true,photos:[],carts:[{ovTotal:20000,ovMode:'equal'}],
+      history:[{step:0,at:d(12),memo:''},{step:1,at:d(10),memo:''},{step:2,at:d(6),memo:'배대지(뉴저지) 입고'},{step:3,at:d(5),memo:''},{step:4,at:d(3),memo:''},{step:5,at:d(1),memo:'관세 없음, 목록통관'}],
+      members:[
+        {...blankMember(),id:'m5',name:'최수진',phone:'010-1212-3434',zip:'48058',addr:'부산 해운대구 센텀중앙로 55',addr2:'2003호',items:[{n:'헬로키티 머그',q:2,p:16000}],paid1:32000,overseas:10000,paid2:14000},
+        {...blankMember(),id:'m6',name:'정민아',phone:'010-9898-7676',delivery:'convenience',items:[{n:'쿠로미 텀블러',q:1,p:29000}],paid1:29000,overseas:10000},
+      ]},
+    {...blankGroup('먼작귀 12월 선주문'),id:'g3',members:[{...blankMember(),id:'m7',name:'한소희',phone:'010-3030-4040',items:[{n:'먼작귀 2027 캘린더',q:1,p:21000}]}],
+      form:{open:true,deadline:'',intro:'12월 신상 선주문 수요조사입니다. 닉네임과 원하는 수량만 골라 주세요.',
+        products:[{id:'p1',name:'먼작귀 2027 캘린더',fx:2200,price:20900,photo:'',maxPer:2,minTarget:3,cap:0},{id:'p2',name:'우사기 인형 S',fx:2300,price:21850,photo:'',maxPer:1,minTarget:3,cap:3}],
+        responses:[{id:'r1',nick:'소희',at:d(2),picks:{p1:1,p2:1}},{id:'r2',nick:'민지',at:d(1),picks:{p1:2}},{id:'r3',nick:'다현',at:d(0),picks:{p2:1}}]}},
+  ];
+  return S;
+}
+const KEY='gongu-settle-v3';
+let S; try{S=JSON.parse(localStorage.getItem(KEY));}catch(e){S=null;}
+if(!S||!S.groups){ S=STANDALONE_BUILD?baseState():seed(); if(STANDALONE_BUILD) S.groups.push(blankGroup('첫 공구')); }
+S.seller=Object.assign(baseState().seller,S.seller||{}); if(!S.seller.syncUrl) S.seller.syncUrl=DEFAULT_SYNC; if(!S.notice||S.notice===OLD_NOTICE) S.notice=DEFAULT_NOTICE;
+S.groups.forEach(g=>{if(g.rate==null)g.rate=9.5;if(!g.carts||!g.carts.length)g.carts=[{ovTotal:g.ovTotal||0,ovMode:g.ovMode||'equal'}];g.members=g.members.map(m=>Object.assign(blankMember(),m));g.members.forEach(m=>{if(!(m.cart<g.carts.length))m.cart=0;});if(!g.form)g.form=blankForm();if(g.form.rules==null)g.form.rules=DEFAULT_RULES;if(g.form.welcome==null||g.form.welcome===DEFAULT_WELCOME.replace('어서 오세요\n','어서 오세요 🍀\n'))g.form.welcome=DEFAULT_WELCOME;if(g.form.openAt==null)g.form.openAt='';if(g.form.extra==null)g.form.extra=DEFAULT_EXTRA;if(g.form.store==null)g.form.store='';g.form.products=(g.form.products||[]).map(x=>Object.assign(blankProduct(),x));g.form.responses=g.form.responses||[];});
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('저장 공간이 부족해요 (사진을 줄여 주세요)');} syncPush(); }
+
+let V={mode:'admin',gid:S.groups[0]?.id,mid:null,tabA:'status',tabM:'s1',adminKey:'',sub:{}};
+try{Object.assign(V,JSON.parse(localStorage.getItem(KEY+'-view'))||{});}catch(e){}
+if(!V.sub)V.sub={};
+function saveView(){try{localStorage.setItem(KEY+'-view',JSON.stringify(V));}catch(e){}}
+let personal=null, formView=null; /* 개인 링크(#p-아이디) · 모집폼(#f-공구아이디) */
+function readHash(){const h=location.hash.replace('#','');personal=null;formView=null;
+  if(h.startsWith('f-')){formView=h.slice(2);const g=S.groups.find(x=>x.id===formView);if(g)V.gid=g.id;return;}
+  if(h.startsWith('p-')){personal=h.slice(2);V.mode='member';for(const g of S.groups){if(g.members.find(x=>x.id===personal)){V.gid=g.id;V.mid=personal;}}}
+  else if(h==='admin'||h==='member'){V.mode=h;}}
+readHash();
+
+/* 계산 */
+const won=n=>Math.round(n).toLocaleString('ko-KR')+'원';
+const s1=m=>m.items.reduce((a,i)=>a+i.q*i.p,0);
+const r1=m=>Math.max(0,s1(m)-(m.paid1||0));
+const dom=m=>DOMESTIC[m.delivery]||DOMESTIC.normal;
+const dcls=m=>m.delivery==='convenience'?'cvs':'visit';
+const dpill=m=>`<span class="pill ${dcls(m)}">${esc(dom(m).t)}</span>`;
+const s2=m=>(+m.overseas||0)+dom(m).fee;
+const r2=m=>Math.max(0,s2(m)-(m.paid2||0));
+const paid1=m=>r1(m)===0, paid2=m=>r2(m)===0;
+const sym1=g=>(CURR[g.currency]||CURR.JPY).sym;
+const usdRate=()=>(S.rates&&S.rates.USD)||CURR.USD.rate;
+const fmtLocal=(g,n)=>sym1(g)+Math.round(n).toLocaleString('ko-KR');
+const fxNote=(g,i)=>i.fx?`${sym1(g)}${(+i.fx).toLocaleString('ko-KR')} × ${g.rate}`:'';
+function recalc(g){g.members.forEach(m=>m.items.forEach(i=>{if(i.fx)i.p=Math.round(i.fx*g.rate);}));}
+function distribute(g){
+  g.carts.forEach((c,ci)=>{
+    const mem=g.members.filter(m=>(m.cart||0)===ci); const auto=mem.filter(m=>!m.ovManual); if(!auto.length) return;
+    const fixed=mem.filter(m=>m.ovManual).reduce((a,m)=>a+(+m.overseas||0),0);
+    const pool=Math.max(0,(+c.ovTotal||0)-fixed);
+    const wt=m=>c.ovMode==='amount'?s1(m):c.ovMode==='qty'?m.items.reduce((a,i)=>a+i.q,0):c.ovMode==='weight'?(+m.w||0):1;
+    const tot=auto.reduce((a,m)=>a+wt(m),0); let acc=0;
+    auto.forEach((m,i)=>{const share=tot?wt(m)/tot:1/auto.length;const v=i===auto.length-1?pool-acc:Math.round(pool*share/10)*10;m.overseas=Math.max(0,v);acc+=m.overseas;});
+  });
+}
+function allocate(g){
+  const f=g.form||blankForm(); const res=[...(f.responses||[])].sort((a,b)=>a.at<b.at?-1:a.at>b.at?1:0);
+  const got={}; f.products.forEach(p=>got[p.id]=0); const all=[];
+  res.forEach(r=>{for(const [pid,q0] of Object.entries(r.picks||{})){const p=f.products.find(x=>x.id===pid); const q=+q0||0; if(!p||!q) continue;
+    const cap=p.cap>0?p.cap:Infinity; const take=Math.max(0,Math.min(q,cap-got[pid])); all.push({rid:r.id,nick:r.nick,at:r.at,pid,name:p.name,price:p.price,q:take,wanted:q}); got[pid]+=take;}});
+  const viable={}; f.products.forEach(p=>viable[p.id]=got[p.id]>0&&got[p.id]>=(p.minTarget||1));
+  return {alloc:all.filter(a=>a.q>0&&viable[a.pid]),dropped:all.filter(a=>a.q<a.wanted||!viable[a.pid]),got,viable};
+}
+const formDone=g=>{const f=g.form; if(!f||!f.products.length) return false; const {got}=allocate(g); return f.products.every(p=>got[p.id]>=(p.minTarget||1));};
+const formExpired=g=>!!(g.form&&g.form.deadline&&new Date(g.form.deadline+'T23:59:59')<new Date());
+const formWaiting=g=>!!(g.form&&g.form.open&&g.form.openAt)&&new Date(g.form.openAt)>new Date();
+const formOpen=g=>!!(g.form&&g.form.open)&&!formWaiting(g)&&!formExpired(g)&&!g.closed;
+const fmtOpenAt=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+const cartName=(g,ci)=>g.carts.length>1?`${ci+1}번 장바구니`:'';
+const hasAddr=m=>m.delivery==='convenience'?!!m.cvs:!!m.addr;
+const addrText=m=>m.delivery==='convenience'?`${m.cvs||''}${m.cvsAddr?' ('+m.cvsAddr+')':''}`:(m.zip?'['+m.zip+'] ':'')+fullAddr(m);
+const fmtDate=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일`;};
+const fmtDT=iso=>{const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+const G=()=>S.groups.find(g=>g.id===V.gid)||S.groups[0];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fullAddr=m=>[m.addr,m.addr2].filter(Boolean).join(' ');
+const nickOf=g=>g.nick||'닉네임 미설정';
+
+/* 공통 */
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>e.hidden=true,1800);}
+function copyText(t,label){
+  const done=()=>toast((label||'복사')+' 완료');
+  const fallback=()=>{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){toast('복사가 막혀 있어요. 길게 눌러 복사해 주세요');}ta.remove();};
+  try{navigator.clipboard.writeText(t).then(done).catch(fallback);}catch(e){fallback();}
+}
+const ICON_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>';
+const ICON_TRUCK='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg>';
+let downloadsNS=null;
+(async()=>{try{if(window.claude?.use){downloadsNS=await window.claude.use('downloads');}}catch(e){}})();
+async function saveFile(filename,data){
+  if(downloadsNS){try{await downloadsNS.save({filename,data});toast('저장했어요');}catch(e){if(e&&e.code==='declined')return;toast('저장 실패: '+(e&&e.message||e));}return;}
+  if(!(window.claude&&window.claude.use)){try{const blob=data instanceof Blob?data:new Blob([data]);const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('다운로드를 시작했어요');}catch(e){toast('저장 실패: '+e.message);}return;}
+  toast('이 화면에서는 파일 저장이 막혀 있어요. 공유 링크로 열면 저장됩니다');
+}
+function ratesBox(g){
+  const r=S.rates, inClaude=!!(window.claude&&window.claude.use);
+  if(!r) return `<p class="help" style="margin-top:6px">오늘 환율: ${inClaude?'이 화면(클로드 안)에서는 자동 조회가 막혀 있어요. 사이트에 올리면 자동으로 뜹니다.':'불러오는 중… <button class="btn s" data-ratesrefresh>다시 시도</button>'}</p>`;
+  return `<div class="row" style="margin-top:8px"><span class="pill">오늘 환율 ${Object.keys(CURR).map(k=>CURR[k].sym+'1 = '+(+r[k]).toLocaleString('ko-KR',{maximumFractionDigits:2})+'원').join(' · ')}</span><button class="btn s" data-applyrate="1">이 공구에 적용 (${sym1(g)}1 = ${(+r[g.currency]).toFixed(2)}원)</button><span class="muted" style="font-size:12px">${fmtDT(r.at)} 기준 · 시장 환율(은행 고시와 약간 다를 수 있음)</span></div>`;
+}
+let ratesTried=false;
+async function fetchRates(force){
+  if(!canFetch()||(ratesTried&&!force)) return; ratesTried=true;
+  try{ const res=await fetch('https://open.er-api.com/v6/latest/USD'); const j=await res.json(); if(!j||!j.rates||!j.rates.KRW) throw 0;
+    const krw=j.rates.KRW; S.rates={USD:krw,JPY:krw/j.rates.JPY,CNY:krw/j.rates.CNY,EUR:krw/j.rates.EUR,at:now()}; try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} render();
+  }catch(e){ toast('환율을 불러오지 못했어요'); }
+}
+function recalcProducts(g){(g.form&&g.form.products||[]).forEach(p=>{if(p.fx)p.price=Math.round(p.fx*g.rate);});}
+function applyFonts(){const r=document.documentElement.style;r.setProperty('--body',`"${S.seller.fontBody}",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif`);r.setProperty('--title',`"${S.seller.fontTitle}","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif`);}
+function statusPill(g){return g.step<0?`<span class="pill">⏳ 1차 입금 모으는 중</span>`:`<span class="pill ok">📦 ${esc(STEPS[g.step].t)}</span>`;}
+function timeline(g){
+  if(g.step<0) return `<p class="help">아직 진행 단계가 없어요. 1차 입금이 모이면 주문 접수부터 시작됩니다.</p>`;
+  const rows=[];for(let i=g.step;i>=0;i--){const h=g.history.find(x=>x.step===i);
+    rows.push(`<li class="${i===g.step?'now':'done'}"><span class="dot"></span><span class="t2">${esc(STEPS[i].t)}</span><span class="at">${h?fmtDT(h.at):''}</span>${h&&h.memo?`<span class="memo">${esc(h.memo)}</span>`:''}</li>`);}
+  return `<ul class="tl">${rows.join('')}</ul>`;
+}
+const SUBDEF={settings:'basic',notify:'all',ship:'pickup',pay:'p1',status:'main',form:'setup'};
+const sub=(key,id)=>((V.sub&&V.sub[key])||SUBDEF[key])===id;
+function subtabs(key,list){return `<div class="subtabs" role="tablist">${list.map(t=>`<button role="tab" class="${t.c||''}" aria-selected="${sub(key,t.id)}" data-sub="${key}:${t.id}">${esc(t.t)}${t.n?`<span class="n">${t.n}</span>`:''}</button>`).join('')}</div>`;}
+function tabs(list,cur,key){return `<div class="tabs" role="tablist">${list.map(t=>`<button role="tab" aria-selected="${t.id===cur}" data-tab="${key}:${t.id}">${esc(t.t)}${t.n?`<span class="n">${t.n}</span>`:''}</button>`).join('')}</div>`;}
+function logiRow(g,m,i){
+  const box=m.box||dom(m).box;
+  const item=m.items[0]?(m.items.length>1?`${m.items[0].n.slice(0,6)} 외 ${m.items.length-1}건`:m.items[0].n):'굿즈';
+  return {i:i+1,name:m.name,phone:m.phone.replace(/\D/g,''),zip:m.zip||'',addr:m.addr||'',addr2:m.addr2||'',box,item:item.slice(0,10),price:s1(m),priceMan:Math.max(1,Math.round(s1(m)/10000)),memo:(m.memo||'').replace(/[^가-힣a-zA-Z0-9 ]/g,'').slice(0,30)};
+}
+
+/* 렌더 */
+function render(){
+  applyFonts();
+  const app=document.getElementById('app'); const g=G(); if(g) V.gid=g.id;
+  if(formView){
+    const fg=S.groups.find(x=>x.id===formView);
+    app.innerHTML=`<div class="top"><div class="brand">${fg?esc(fg.title)+' 공구':'모집폼'}<small>${fg?'수요조사 · '+esc(nickOf(fg)):''}</small></div></div><div class="cols single"><div class="panel">${fg?renderForm(fg):`<div class="card"><h2>폼을 찾을 수 없어요</h2><p class="help">링크를 다시 확인해 주세요.</p></div>`}</div></div>`;
+    bind(); return;
+  }
+  if(personal){
+    const m=g&&!g.closed&&g.members.find(x=>x.id===personal);
+    app.innerHTML=`<div class="top"><div class="brand">${g?esc(g.title)+' 공구':'정산서'}<small>${g?'정산서 · '+esc(nickOf(g)):''}</small></div></div><div class="cols single"><div class="panel mv">${m?renderMember(g):`<div class="card"><h2>${g&&g.closed?'마무리된 공구예요':'정산서를 찾을 수 없어요'}</h2><p class="help">${g&&g.closed?'공구가 마무리되어 이 정산서는 더 이상 열리지 않습니다. 참여해 주셔서 감사합니다.':'링크가 바뀌었거나 아직 준비 중입니다. 보내준 사람에게 다시 받아 주세요.'}</p></div>`}</div></div>`;
+    bind(); return;
+  }
+  const active=S.groups.filter(x=>!x.closed), past=S.groups.filter(x=>x.closed);
+  const chips=active.map(x=>`<button aria-pressed="${x.id===V.gid}" data-g="${x.id}">${esc(x.title)}</button>`).join('')+`<button class="add" id="addG">+ 새 공구</button>`+(past.length?`<button class="muted" id="showPast" aria-pressed="${!!V.showPast}">지난 공구 ${past.length}</button>`:'')
+    +(V.showPast&&past.length?`<div class="chips past">${past.map(x=>`<button aria-pressed="${x.id===V.gid}" data-g="${x.id}">${esc(x.title)} · ${x.closedAt?fmtDate(x.closedAt):''}</button>`).join('')}</div>`:'');
+  app.innerHTML=`
+    <div class="top">
+      <div class="brand">🧾 직구 공구 정산서 🧾<small>공구 ${S.groups.length}건</small></div>
+      <div class="seg" role="tablist"><button aria-pressed="${V.mode==='admin'}" data-mode="admin">내 화면</button><button aria-pressed="${V.mode==='member'}" data-mode="member">참여자 화면</button></div>
+    </div>
+    <div class="chips">${chips}</div>
+    ${!g?`<div class="card"><h2>공구가 없어요</h2><p class="help">"새 공구"를 눌러 만들어 주세요.</p></div>`:`
+    <div class="cols">
+      <div class="panel col" ${V.mode!=='admin'?'hidden':''}><div class="eyebrow">내 화면 (관리자)</div>${renderAdmin(g)}</div>
+      <div class="panel col mv ${V.tabA==='form'?'formhide':''}" ${V.mode!=='member'?'hidden':''}><div class="eyebrow light">참여자 화면 미리보기</div>${renderMember(g)}</div>
+      ${V.tabA==='form'?`<div class="panel col formprev"><div class="row between"><div class="eyebrow light">모집폼 · 참여자 폰에서 보이는 모습</div><button class="btn s" id="formReset">미리보기 초기화</button></div><div class="phone"><div class="top" style="margin-bottom:8px"><div class="brand" style="font-size:20px">${esc(g.title)} 공구<small>수요조사 · ${esc(nickOf(g))}</small></div></div><div class="panel mv">${renderForm(g)}</div></div></div>`:''}
+    </div>`}`;
+  bind();
+}
+
+function acctBlock(amount,name){
+  return `<div class="acctbox">
+      <div class="row between"><span class="pill ok">${esc(S.seller.bank)}</span><span class="muted" style="font-size:13px">예금주 ${esc(S.seller.holder)}</span></div>
+      <div class="acct"><div class="n num">${esc(S.seller.acct)}</div><button class="copy" data-copy="${esc(S.seller.acct.replace(/-/g,''))}" data-label="계좌번호">${ICON_COPY}</button></div>
+      <div class="row"><button class="btn s" data-copy="${esc(S.seller.bank+' '+S.seller.acct+' '+S.seller.holder)}" data-label="은행·계좌·예금주">은행+계좌 복사</button>${amount?`<button class="btn s" data-copy="${amount}" data-label="입금 금액">입금액 ${won(amount)} 복사</button>`:''}</div>
+      ${amount?`<div class="band bad">${won(amount)} 입금 후 입금자명 "${esc(name)}"으로 보내주세요</div>`:`<div class="band">입금이 확인되었습니다. 감사합니다 💛</div>`}
+    </div>`;
+}
+function renderMember(g){
+  const m=g.members.find(x=>x.id===V.mid)||g.members[0];
+  if(!m) return `<div class="card"><h2>참여자가 없어요</h2><p class="help">내 화면 → 참여자 탭에서 추가해 주세요.</p></div>`;
+  V.mid=m.id; saveView();
+  const p1=paid1(m), rem1=r1(m), p2=paid2(m), rem2=r2(m), addrOk=hasAddr(m);
+  const trackUrl=m.tracking?(m.delivery==='convenience'?GS_TRACK(m.tracking.replace(/\D/g,'')):(TRACK[g.courier]||TRACK['CJ대한통운'])(m.tracking.replace(/\D/g,''))):'';
+  if(!['s1','s2','progress','addr'].includes(V.tabM)) V.tabM='s1';
+  const T=V.tabM;
+  const ck=(ok,label,sub)=>`<div class="ck ${ok===null?'':ok?'ok':'no'}"><span class="mark">${ok===null?'⏳':ok?'✅':'❌'}</span><span class="lb">${label}</span><span class="sb">${sub}</span></div>`;
+  const notice=`<div class="notice">${esc(S.notice)}</div>`;
+  const head=title=>`<div class="shop">${esc(g.title)} 공구</div><div class="date">${fmtDate(g.date)} · ${esc(nickOf(g))} · ${title}</div><div class="greet">${esc(m.name)}님 안녕하세요, ${esc(nickOf(g))}입니다.</div>`;
+  const proofBtn=`<button class="btn" data-proof ${g.photos.length?'':'disabled'}>📎 증빙 서류 (${g.photos.length}장)</button>`;
+  return `
+    ${personal?'':`<div class="card" style="padding:10px 16px"><label class="f">보여줄 참여자 (실제로는 각자 개인 링크로 들어와요)<select id="pickM">${g.members.map(x=>`<option value="${x.id}" ${x.id===m.id?'selected':''}>${esc(x.name)}</option>`).join('')}</select></label></div>`}
+    <div class="card">
+      <div class="row between" style="margin-bottom:8px"><b>${esc(m.name)}님 확인 사항</b>${statusPill(g)}</div>
+      <div class="checks">
+        ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 남음':'입금 전'))}
+        ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':(m.paid2>0?won(rem2)+' 남음':'입금 전'))}
+        ${ck(addrOk,'배송지 입력',addrOk?dom(m).t:'아직 안 함')}
+      </div>
+    </div>
+    ${tabs([{id:'s1',t:'1차 정산서'},{id:'s2',t:'2차 정산서'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력'}],T,'m')}
+
+    <div ${T!=='s1'?'hidden':''} class="panel">
+      <div class="receipt" id="receiptEl1">
+        ${head('1차 정산서')}
+        <div class="stage">
+          <div class="hd"><b>1차 정산 · 현지 상품 금액</b>${p1?`<span class="pill ok">입금 확인</span>`:`<span class="pill no">${won(rem1)} 남음</span>`}</div>
+          ${m.items.map(i=>`<div class="line"><span>${esc(i.n)}<span class="q">${i.q}개${i.fx?' · '+esc(fxNote(g,i)):''}</span></span><span class="num">${(i.q*i.p).toLocaleString('ko-KR')}</span></div>`).join('')}
+          <div class="line sub"><span>적용 환율</span><span class="num">${sym1(g)}1 = ${g.rate}원</span></div>
+          <div class="line total"><span>1차 합계</span><span class="num">${won(s1(m))}</span></div>
+          <div class="line sub"><span>받은 금액</span><span class="num">-${(m.paid1||0).toLocaleString('ko-KR')}원</span></div>
+        </div>
+        <div class="grand ${rem1?'due':'paid'}"><span>1차 보내실 금액</span><span class="num">${won(rem1)}</span></div>
+        ${acctBlock(rem1,m.name)}
+        ${notice}
+      </div>
+      <div class="row">${proofBtn}<button class="btn" data-saveimg="receiptEl1" data-title="1차정산서">💾 이미지로 저장</button></div>
+      <p class="help keep">공구가 마무리되면 이 정산서는 더 이상 열리지 않아요. 보관하시려면 💾 이미지로 저장하거나 화면을 캡처해 두세요.</p>
+    </div>
+
+    <div ${T!=='s2'?'hidden':''} class="panel">
+      <div class="receipt" id="receiptEl2">
+        ${head('2차 정산서')}
+        <div class="stage">
+          <div class="hd"><b>2차 정산 · 배송비</b>${!g.stage2Open?`<span class="pill">준비 중</span>`:p2?`<span class="pill ok">입금 확인</span>`:`<span class="pill no">${won(rem2)} 남음</span>`}</div>
+          ${g.stage2Open?`
+          <div class="line"><span>해외배송비 <span class="q">${cartName(g,m.cart||0)||'배대지 → 한국'}</span></span><span class="num">${(+m.overseas||0).toLocaleString('ko-KR')}</span></div>
+          <div class="line"><span>국내배송비 <span class="q">${esc(dom(m).t)}</span></span><span class="num">${dom(m).fee.toLocaleString('ko-KR')}</span></div>
+          <div class="line total"><span>2차 합계</span><span class="num">${won(s2(m))}</span></div>
+          <div class="line sub"><span>받은 금액</span><span class="num">-${(m.paid2||0).toLocaleString('ko-KR')}원</span></div>`
+          :`<div class="closed">해외배송비는 배대지 입고 후 확정됩니다. 확정되면 여기에 금액이 뜨고 따로 안내드릴게요.</div>`}
+        </div>
+        ${g.stage2Open?`<div class="grand ${rem2?'due':'paid'}"><span>2차 보내실 금액</span><span class="num">${won(rem2)}</span></div>${acctBlock(rem2,m.name)}`:''}
+        ${notice}
+      </div>
+      <div class="row">${proofBtn}${g.stage2Open?`<button class="btn" data-saveimg="receiptEl2" data-title="2차정산서">💾 이미지로 저장</button>`:''}</div>
+      <p class="help keep">공구가 마무리되면 이 정산서는 더 이상 열리지 않아요. 보관하시려면 💾 이미지로 저장하거나 화면을 캡처해 두세요.</p>
+    </div>
+
+    <div ${T!=='progress'?'hidden':''} class="panel">
+      <div class="card"><h2>진행 상황</h2>${timeline(g)}</div>
+      ${m.tracking?`<div class="dark"><div class="ic">${ICON_TRUCK}</div><div><small>${m.delivery==='convenience'?'GS 반값택배':esc(g.courier)} · 운송장 번호</small><div class="tn num">${esc(m.tracking)}</div><a href="${trackUrl}" target="_blank" rel="noopener">택배 위치보기 ›</a></div><button class="copy" data-copy="${esc(m.tracking.replace(/\D/g,''))}" data-label="운송장 번호">${ICON_COPY}</button></div>`
+      :`<div class="card"><h2>운송장 번호</h2><p class="help">택배가 접수되면 여기에 ${esc(g.courier)} 운송장 번호가 표시됩니다.</p></div>`}
+    </div>
+
+    <div ${T!=='addr'?'hidden':''} class="panel">
+      <div class="card">
+        <h2>배송지 입력</h2>
+        ${addrOk?`<dl class="kv"><dt>배송 방법</dt><dd>${dpill(m)} ${dom(m).fee.toLocaleString('ko-KR')}원</dd><dt>받는 분</dt><dd><b>${esc(m.name)}</b> · ${esc(m.phone)}</dd>${m.delivery==='convenience'?`<dt>수령 편의점</dt><dd>${esc(m.cvs)}<br>${esc(m.cvsAddr)}</dd>`:`<dt>주소</dt><dd>${m.zip?'['+esc(m.zip)+'] ':''}${esc(fullAddr(m))}</dd>`}${m.memo?`<dt>요청사항</dt><dd>${esc(m.memo)}</dd>`:''}</dl>
+          <div class="row end" style="margin-top:8px"><button class="btn s" id="editAddr">배송지 수정</button></div>`
+        :`<div class="band bad" style="margin-bottom:10px">배송지가 아직 없어요. 입력하면 ${esc(nickOf(g))}에게 바로 전달됩니다.</div>`}
+        <form id="addrForm" ${addrOk?'hidden':''}>
+          <div class="grid2">
+            <label class="f">받는 분 (실 수령자 성함)<input id="a_name" value="${esc(m.name)}" required></label>
+            <label class="f">휴대폰 번호<input id="a_phone" value="${esc(m.phone)}" inputmode="tel" placeholder="010-0000-0000" required></label>
+          </div>
+          <label class="f" style="margin-top:8px">배송 방법<select id="a_delivery"><option value="normal" ${m.delivery!=='convenience'?'selected':''}>일반택배 4,000원 (집·회사로 받기)</option><option value="convenience" ${m.delivery==='convenience'?'selected':''}>편의점택배 2,500원 (GS25에서 찾기)</option></select></label>
+          <div id="a_home" ${m.delivery==='convenience'?'hidden':''}>
+            <div class="grid2" style="margin-top:8px"><label class="f">우편번호<input id="a_zip" value="${esc(m.zip)}" inputmode="numeric" placeholder="07990"></label><label class="f">요청사항 (한글·영문·숫자, 30자)<input id="a_memo" value="${esc(m.memo)}" maxlength="30" placeholder="공동현관 비번 1234"></label></div>
+            <label class="f" style="margin-top:8px">주소 (도로명)<input id="a_addr" value="${esc(m.addr)}" placeholder="서울 양천구 목동남로4길 6-23"></label>
+            <label class="f" style="margin-top:8px">상세주소 (동·호수)<input id="a_addr2" value="${esc(m.addr2)}" placeholder="211동 407호"></label>
+          </div>
+          <div id="a_cvsbox" ${m.delivery==='convenience'?'':'hidden'}>
+            <p class="help" style="margin:8px 0 4px">편의점택배는 <b>GS25</b>만 가능합니다. 배송 완료 시 입력한 휴대폰 번호로 도착 알림과 고객확인용 QR코드가 가므로 번호를 정확히 적어 주세요.</p>
+            <label class="f">도착 편의점명 (GS25 지점명)<input id="a_cvs" value="${esc(m.cvs)}" placeholder="GS25 목동중앙점"></label>
+            <label class="f" style="margin-top:8px">도착 편의점 주소<input id="a_cvsAddr" value="${esc(m.cvsAddr)}" placeholder="서울 양천구 목동동로 100"></label>
+          </div>
+          <div class="row end" style="margin-top:10px"><button class="btn p" type="submit">배송지 저장</button></div>
+        </form>
+      </div>
+    </div>`;
+}
+
+function formNotice(g){
+  const f=g.form; const prods=f.products;
+  const li=t=>`<li>${esc(t)}</li>`;
+  return `<div class="card notice-card">
+      <div class="nl"><span class="ic">🏪</span><div><b>구매처</b><div>${f.store?esc(f.store):'<span class="muted">미정</span>'}</div></div></div>
+      <div class="nl"><span class="ic">📌</span><div><b>공구 상품</b><div style="white-space:pre-line">${f.itemsText?esc(f.itemsText):(prods.length?prods.map(p=>esc(p.name)).join(', '):'<span class="muted">준비 중</span>')}</div></div></div>
+      <div class="nl"><span class="ic">💰</span><div><b>가격</b><div style="white-space:pre-line">${f.priceText?esc(f.priceText):(prods.length?`<ul class="plain">${prods.map(p=>`<li>${esc(p.name)} · ${p.fx?fmtLocal(g,p.fx)+' ≈ ':''}${won(p.price||0)}${p.maxPer?` (1인 최대 ${p.maxPer}개)`:''}</li>`).join('')}</ul><div class="muted" style="font-size:12px">환율 ${sym1(g)}1 = ${g.rate}원 기준, 실제 정산 시 환율에 따라 달라질 수 있습니다.</div>`:'<span class="muted">준비 중</span>')}</div></div></div>
+      <div class="nl"><span class="ic">📦</span><div><b>해외·국내 배송비</b><div>해외배송비 1/n (물품당 계산) + 국내배송비 편의점택배 ${DOMESTIC.convenience.fee.toLocaleString('ko-KR')}원(GS25) / 일반택배 ${DOMESTIC.normal.fee.toLocaleString('ko-KR')}원</div></div></div>
+      ${f.extra?`<div class="nl"><span class="ic">⚠️</span><div><b>기타 안내</b><div style="white-space:pre-line">${esc(f.extra)}</div></div></div>`:''}
+      ${f.rules?`<ul class="rules">${f.rules.split('\n').map(x=>x.trim()).filter(Boolean).map(li).join('')}</ul>`:''}
+    </div>
+    <div class="card">
+      <label class="sw" style="white-space:normal;align-items:flex-start"><input type="checkbox" id="noticeOk"> <span>위 안내 사항을 모두 확인했습니다.</span></label>
+      <div class="row end" style="margin-top:10px"><button class="btn p" id="noticeNext" disabled>다음 → 수량 선택</button></div>
+    </div>`;
+}
+function renderForm(g){
+  const f=g.form, open=formOpen(g), {got}=allocate(g);
+  const done=V.formDone===g.id; const step=(V.formStep&&V.formStep[g.id])||'welcome';
+  const head=`<div class="card" style="padding:10px 14px"><div class="row between">${open?`<span class="pill ok">모집 중${f.deadline?' · '+esc(f.deadline)+'까지':''}</span>`:`<span class="pill">마감</span>`}${f.intro?`<span class="muted" style="font-size:13px">${esc(f.intro)}</span>`:''}</div></div>`;
+  if(done) return head+`<div class="band" style="line-height:1.7">신청이 접수되었습니다.<br>선정되신 분께만 1~2일 안에 ${esc(nickOf(g))}이(가) 따로 연락드려요 :)<br><span style="font-weight:400;font-size:13px">선정되지 않은 경우에는 별도 안내가 없는 점 양해 부탁드립니다.</span></div>${open?`<div class="row end"><button class="btn s" id="formAgain">하나 더 신청</button></div>`:''}`;
+  if(!formView&&!open&&V.formDone!==g.id) { /* 관리자 미리보기: 마감 상태 안내 */ }
+  if(formWaiting(g)) return head+`<div class="invite"><div class="inv-frame"><div class="inv-body"><div class="inv-script">Coming soon</div><div class="inv-title">${esc(nickOf(g))}의 모집글</div><div class="inv-text">${fmtOpenAt(f.openAt)}에 열립니다.\n조금만 기다려 주세요.</div></div></div></div>`;
+  if(!open) return head+`<div class="band">모집이 마감되었습니다. 참여해 주셔서 감사합니다.</div>`;
+  if(step==='welcome'||!step) return head+`
+    <div class="invite">
+      <div class="inv-frame">
+        
+        <div class="inv-body">
+          <div class="inv-mark">💌</div>
+          ${(()=>{const t=(f.welcome||DEFAULT_WELCOME).replace(/\{닉네임\}/g,nickOf(g)).split('\n');const first=t.shift();return `<div class="inv-title">${esc(first)}</div><div class="inv-text">${esc(t.join('\n').replace(/^\n+/,''))}</div>`;})()}
+          <div class="inv-meta">${f.store?`<div>구매처 : ${esc(f.store)}</div>`:''}${f.openAt?`<div>모집 시작 : ${fmtOpenAt(f.openAt)}</div>`:''}${f.deadline?`<div>마감 : ${esc(f.deadline)}</div>`:''}</div>
+        </div>
+      </div>
+    </div>
+    <div class="row end"><button class="btn p" id="welcomeNext">다음 → 안내 사항</button></div>`;
+  if(step==='notice') return head+formNotice(g);
+  const rv=V.formReview&&V.formReview.gid===g.id?V.formReview:null;
+  if(step==='review'&&rv) return head+`
+    <div class="card">
+      <h2>신청 내용 확인</h2>
+      <p class="help" style="margin-bottom:8px">신청 후에는 주문 취소가 어렵습니다. 닉네임과 수량을 다시 한 번 확인해 주세요.</p>
+      <dl class="kv"><dt>닉네임</dt><dd><b>${esc(rv.nick)}</b></dd>${Object.entries(rv.picks).map(([pid,q])=>{const p=f.products.find(x=>x.id===pid);return p?`<dt>상품</dt><dd>${esc(p.name)} <b>× ${q}</b>${p.price?` · ${won(p.price*q)}`:''}</dd>`:'';}).join('')}</dl>
+      ${(()=>{const qty=Object.values(rv.picks).reduce((a,b)=>a+(+b||0),0);const items=Object.entries(rv.picks).reduce((a,[pid,q])=>{const p=f.products.find(x=>x.id===pid);return a+((p&&p.price||0)*q);},0);return `<div class="est card" style="margin-top:10px;padding:10px 12px"><div class="line"><span>현지 물품비</span><span class="num">${won(items)}</span></div><div class="line"><span>해외 배송비 <span class="q">품목당 3,000원 × ${qty}개</span></span><span class="num">약 ${won(qty*3000)}</span></div><div class="line"><span>국내 배송비 <span class="q">일반택배 기준</span></span><span class="num">약 ${won(DOMESTIC.normal.fee)}</span></div><div class="line total"><span>예상 합계</span><span class="num">약 ${won(items+qty*3000+DOMESTIC.normal.fee)}</span></div></div><p class="help" style="margin-top:6px">⚠️ <b style="color:var(--bad)">예상치이며 정산 금액은 달라질 수 있습니다.</b></p><p class="help" style="margin-top:4px">🏝️ 도서·산간 지역은 배송비가 추가 청구됩니다.</p>`;})()}
+      <div class="row between" style="margin-top:12px"><button class="btn" id="reviewBack">← 수정하기</button><button class="btn p" id="reviewOk">확인했어요, 이대로 신청</button></div>
+    </div>`;
+  return head+`
+    <form id="recruitForm" class="panel">
+      <div class="card">
+        <div class="row between"><label class="f" style="flex:1">닉네임 (카페에서 쓰는 이름)<input id="r_nick" placeholder="닉네임" required maxlength="20" value="${rv?esc(rv.nick):''}"></label></div>
+      </div>
+      ${f.products.map(p=>{const left=p.cap>0?Math.max(0,p.cap-got[p.id]):null;return `
+      <div class="card" style="display:grid;grid-template-columns:${p.photo?'96px 1fr':'1fr'};gap:12px;align-items:start">
+        ${p.photo?`<img src="${p.photo}" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">`:''}
+        <div>
+          <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
+          <div class="muted" style="font-size:13px">${p.price?won(p.price)+' · ':''}1인 최대 ${p.maxPer}개${left!==null?` · 남은 수량 ${left}개`:''}</div>
+          <label class="f" style="margin-top:8px;max-width:160px">수량<select data-pick="${p.id}" ${left===0?'disabled':''}>${Array.from({length:(left===null?p.maxPer:Math.min(p.maxPer,left))+1},(_,i)=>`<option value="${i}" ${rv&&rv.picks[p.id]===i?'selected':''}>${i}개</option>`).join('')}</select></label>
+        </div>
+      </div>`;}).join('')}
+      <div class="card est" id="estBox" hidden>
+        <div class="row between"><b>예상 금액</b><span class="pill">추후 변동 가능</span></div>
+        <div class="line"><span>현지 물품비 <span class="q" id="estItemsQ"></span></span><span class="num" id="estItems">0원</span></div>
+        <div class="line"><span>해외 배송비 <span class="q">품목당 3,000원 × <span id="estQty">0</span>개</span></span><span class="num" id="estOversea">약 0원</span></div>
+        <div class="line"><span>국내 배송비 <span class="q">일반택배 기준</span></span><span class="num">약 ${DOMESTIC.normal.fee.toLocaleString('ko-KR')}원</span></div>
+        <div class="line total"><span>예상 합계</span><span class="num" id="estTotal">약 0원</span></div>
+        <p class="help" style="margin-top:8px">⚠️ <b style="color:var(--bad)">위 금액은 예상치입니다.</b> 환율, 실제 해외 배송비, 선택하신 국내 배송 방법에 따라 <b style="color:var(--bad)">정산 금액은 달라질 수 있어요.</b></p><p class="help" style="margin-top:6px">🏝️ 도서·산간 지역은 배송비가 추가 청구됩니다.</p>
+        <label class="sw" style="white-space:normal;align-items:flex-start;margin-top:8px"><input type="checkbox" id="estOk"> <span>예상 금액이며 추후 달라질 수 있음을 확인했습니다.</span></label>
+      </div>
+      <div class="row between"><button class="btn s" type="button" id="noticeBack">← 안내 다시 보기</button><button class="btn p" type="submit" id="pickNext" disabled>다음 → 내용 확인</button></div>
+    </form>`;
+}
+function splitCarts(prods,qtyOf,usable){
+  /* 단가 큰 것부터, 들어가는 첫 장바구니에 넣기 */
+  const units=[]; prods.forEach(p=>{const q=qtyOf(p);for(let i=0;i<q;i++)units.push(p);}); units.sort((x,y)=>y.fx-x.fx);
+  const carts=[]; const over=[];
+  units.forEach(p=>{ if(p.fx>usable){over.push(p);return;} let c=carts.find(c=>c.sum+p.fx<=usable+1e-9); if(!c){c={sum:0,items:{}};carts.push(c);} c.sum+=p.fx; c.items[p.id]=(c.items[p.id]||0)+1; });
+  return {carts,over};
+}
+function cartCalcBox(g){
+  const f=g.form, cur=CURR[g.currency]||CURR.JPY; const limitUSD=f.limitUSD||cur.limit; const limitLocal=limitUSD*usdRate()/g.rate;
+  const margin=f.margin!=null?f.margin:Math.round(10000/g.rate); const usable=Math.max(1,limitLocal-margin);
+  const basis=f.basis==='max'?'max':'min'; const qtyOf=p=>basis==='max'?(p.cap>0?p.cap:(p.minTarget||1)):(p.minTarget||1);
+  const prods=f.products.filter(p=>p.fx>0); const total=prods.reduce((a,p)=>a+p.fx*qtyOf(p),0);
+  const {carts,over}=prods.length?splitCarts(prods,qtyOf,usable):{carts:[],over:[]};
+  return `<div class="card">
+    <h2>장바구니 몇 번으로 나눠야 할까</h2>
+    <p class="help">관세 없이(면세 한도 안에서) 주문하려면 몇 번으로 나눠야 하는지와, 각 장바구니에 무엇을 담을지 계산합니다. 상품에 현지가(${sym1(g)})를 넣어야 계산돼요.</p>
+    ${ratesBox(g)}
+    <div class="tiles" style="margin-top:8px">
+      <div class="tile"><small>면세 한도 (달러)</small><input id="limitUSD" inputmode="numeric" value="${limitUSD}" style="padding:4px 8px;font-size:15px;font-weight:700"></div>
+      <div class="tile"><small>면세 한도 (${cur.name})</small><b class="num">${fmtLocal(g,limitLocal)}</b></div>
+      <div class="tile"><small>나의 상품 총액 (${cur.name})</small><b class="num">${fmtLocal(g,total)}</b></div>
+      <div class="tile"><small>여유 금액 (${cur.name})</small><input id="marginLocal" inputmode="numeric" value="${margin}" style="padding:4px 8px;font-size:15px;font-weight:700"></div>
+    </div>
+    <div class="row" style="margin-top:8px"><span class="help">수량 기준:</span><label class="sw"><input type="radio" name="basis" value="min" ${basis==='min'?'checked':''}> 최소 목표</label><label class="sw"><input type="radio" name="basis" value="max" ${basis==='max'?'checked':''}> 매장 최대</label><span class="help">· 장바구니 1개 상한 = ${fmtLocal(g,limitLocal)} − ${fmtLocal(g,margin)} = <b>${fmtLocal(g,usable)}</b></span></div>
+    ${prods.length?`
+    <div class="band ${carts.length>1?'bad':''}" style="margin-top:10px">장바구니 필요 횟수 ${carts.length}회${over.length?' · 한도를 넘는 상품 '+over.length+'개':''}</div>
+    <div class="plist" style="margin-top:8px">${carts.map((c,ci)=>`<div class="prow"><div class="nm">${ci+1}번 장바구니</div><div class="amt num">${fmtLocal(g,c.sum)} <span class="muted" style="font-size:12px">/ ${fmtLocal(g,usable)}</span></div>
+      <ul class="pack">${Object.entries(c.items).map(([pid,q])=>{const p=prods.find(x=>x.id===pid);return `<li><span>${esc(p.name)} <span class="muted">${fmtLocal(g,p.fx)}</span></span><span class="qty">× ${q} = ${fmtLocal(g,p.fx*q)}</span></li>`;}).join('')}</ul></div>`).join('')}
+    ${over.length?`<p class="help" style="color:var(--bad)">${[...new Set(over.map(p=>p.name))].join(', ')} — 한 개 가격이 상한보다 커서 어떤 장바구니에도 못 넣어요. 여유 금액을 줄이거나 따로 주문하세요.</p>`:''}</div>`
+    :'<p class="help" style="margin-top:8px">상품에 현지가를 넣으면 계산이 나와요.</p>'}
+  </div>`;
+}
+function renderFormAdmin(g){
+  const f=g.form, open=formOpen(g), {alloc,dropped,got,viable}=allocate(g);
+  const byNick={}; alloc.forEach(a=>{(byNick[a.nick]=byNick[a.nick]||[]).push(a);});
+  return `
+${subtabs('form',[{id:'setup',t:'폼·상품'},{id:'calc',t:'장바구니 계산'},{id:'result',t:'신청·배정'}])}
+    <div class="subpanel" ${sub('form','setup')?'':'hidden'}>
+    <div class="card">
+      <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">모집폼 ${open?'<span class="pill ok">모집 중</span>':formWaiting(g)?'<span class="pill">열림 예약</span>':'<span class="pill">마감</span>'}</h2><label class="sw"><input type="checkbox" id="formOpen" ${f.open?'checked':''}> 모집 열기</label></div>
+      <p class="help" style="margin:4px 0 8px">카페에 폼 링크를 올리면 사람들이 닉네임과 수량을 적습니다. 모든 상품이 최소 수량에 닿으면 자동으로 마감됩니다.${formExpired(g)?' (마감일이 지나 닫혔어요)':''}</p>
+      <div class="row">
+        <button class="btn s" id="formLink">🔗 폼 링크 복사</button>
+        <label class="f" style="flex:1 1 170px">자동으로 열리는 시각 (선택)<input id="formOpenAt" type="datetime-local" value="${esc(f.openAt)}"></label>
+        <label class="f" style="flex:0 1 150px">마감일 (선택)<input id="formDeadline" type="date" value="${esc(f.deadline)}"></label>
+      </div>
+      <p class="help" style="margin-top:4px">"모집 열기"를 켜 두고 시각을 넣으면 그 시각 전에는 "○월 ○일 ○시에 열립니다"만 보이다가 정각에 자동으로 열립니다.${formWaiting(g)?` <b>지금은 ${fmtOpenAt(f.openAt)} 열림 대기 중.</b>`:''}</p>
+      <label class="f" style="margin-top:8px">🍀 첫 화면 인사말 ({닉네임} 자리에 닉네임이 들어갑니다)<textarea id="formWelcome" rows="6">${esc(f.welcome)}</textarea></label>
+      <label class="f" style="margin-top:8px">한 줄 소개 (상단 작은 글씨)<input id="formIntro" placeholder="예) 12월 신상 선주문 수요조사" value="${esc(f.intro)}"></label>
+      <div class="grp" style="margin-top:12px"><div class="grp-h">첫 화면 안내 사항 (참여자가 확인해야 다음으로 넘어갑니다)</div>
+        <label class="f">🏪 구매처<input id="formStore" placeholder="예) 치이카와 마켓 도쿄역점" value="${esc(f.store)}"></label>
+        <label class="f" style="margin-top:8px">📌 공구 상품 (비우면 상품 목록에서 자동)<textarea id="formItems" rows="2" placeholder="예) 우사기 인형, 하치와레 파우치">${esc(f.itemsText||'')}</textarea></label>
+        <label class="f" style="margin-top:8px">💰 가격 (비우면 상품 목록에서 자동)<textarea id="formPrice" rows="2" placeholder="예) 우사기 인형 ¥2,300 ≈ 21,850원">${esc(f.priceText||'')}</textarea></label>
+        <p class="help" style="margin:8px 0 0">📦 배송비는 고정 문구입니다: 해외배송비 1/n (물품당 계산) + 국내배송비 편의점택배 ${DOMESTIC.convenience.fee.toLocaleString('ko-KR')}원(GS25) / 일반택배 ${DOMESTIC.normal.fee.toLocaleString('ko-KR')}원</p>
+        <label class="f" style="margin-top:8px">⚠️ 기타 안내<textarea id="formExtra" rows="2">${esc(f.extra)}</textarea></label>
+        <label class="f" style="margin-top:8px">✔️ 확인 사항 (한 줄에 하나)<textarea id="formRules" rows="8">${esc(f.rules)}</textarea></label>
+      </div>
+      <div class="row end" style="margin-top:8px"><button class="btn p s" id="formSave">저장</button></div>
+    </div>
+    <div class="card">
+      <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">상품 ${f.products.length}개</h2><button class="btn s p" id="prodAdd">+ 상품</button></div>
+      <div class="plist" style="margin-top:8px">
+        ${f.products.map(p=>`
+        <div class="prow" data-p="${p.id}" style="grid-template-columns:${p.photo?'64px 1fr':'1fr'}">
+          ${p.photo?`<img src="${p.photo}" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">`:''}
+          <div>
+            <div class="grid3"><label class="f">상품명<input data-pf="name" data-pid="${p.id}" value="${esc(p.name)}"></label><label class="f">현지가 (${sym1(g)})<input data-pf="fx" data-pid="${p.id}" inputmode="decimal" value="${p.fx||''}"></label><label class="f">원화 (${p.fx?'자동':'직접'})<input data-pf="price" data-pid="${p.id}" inputmode="numeric" value="${p.price||''}" ${p.fx?'readonly style="background:var(--soft)"':''}></label></div>
+            <div class="grid3" style="margin-top:6px"><label class="f">1인 최대<input data-pf="maxPer" data-pid="${p.id}" inputmode="numeric" value="${p.maxPer}"></label><label class="f">최소 목표<input data-pf="minTarget" data-pid="${p.id}" inputmode="numeric" value="${p.minTarget}"></label><label class="f">매장 최대 (0=제한 없음)<input data-pf="cap" data-pid="${p.id}" inputmode="numeric" value="${p.cap||0}"></label></div>
+            <div class="row" style="margin-top:6px">
+              <span class="pill ${viable[p.id]?'ok':got[p.id]?'':'no'}">신청 ${got[p.id]}개 / 최소 ${p.minTarget}${p.cap?' / 최대 '+p.cap:''}</span>
+              <label class="btn s" style="cursor:pointer">📷 사진<input type="file" accept="image/*" data-pphoto="${p.id}" hidden></label>
+              <button class="btn s danger" data-pdel="${p.id}">삭제</button>
+            </div>
+          </div>
+        </div>`).join('')||'<p class="help">상품을 추가하고 1인 최대·최소 목표 수량을 정하세요.</p>'}
+      </div>
+    </div>
+    </div><div class="subpanel" ${sub('form','calc')?'':'hidden'}>
+    ${cartCalcBox(g)}
+    </div><div class="subpanel" ${sub('form','result')?'':'hidden'}>
+    <div class="card">
+      <h2>신청 ${f.responses.length}건 · 배정 결과</h2>
+      <p class="help" style="margin-bottom:8px">선착순으로 배정하고, 최소 목표에 못 미친 상품은 빠집니다. 매장 최대를 넘긴 신청은 잘립니다.</p>
+      ${Object.keys(byNick).length?`<div class="scroll"><table class="tbl"><thead><tr><th>닉네임</th><th>상품</th><th>수량</th><th>신청 시각</th></tr></thead><tbody>
+        ${alloc.map(a=>`<tr><td>${esc(a.nick)}</td><td class="w">${esc(a.name)}</td><td class="num">${a.q}${a.q<a.wanted?` <span class="muted">(신청 ${a.wanted})</span>`:''}</td><td class="num">${fmtDT(a.at)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="row end" style="margin-top:8px"><button class="btn p" id="formToMembers">배정된 사람을 참여자로 가져오기</button></div>`:'<p class="help">아직 배정된 신청이 없어요.</p>'}
+      ${dropped.length?`<details style="margin-top:10px"><summary>빠진 신청 (${dropped.length})</summary><div class="scroll" style="margin-top:6px"><table class="tbl"><tbody>${dropped.map(a=>`<tr><td>${esc(a.nick)}</td><td class="w">${esc(a.name)}</td><td class="num">${a.wanted}개</td><td class="muted">${!viable[a.pid]?'최소 목표 미달':'매장 최대 초과'}</td></tr>`).join('')}</tbody></table></div></details>`:''}
+      ${f.responses.length?`<details style="margin-top:10px"><summary>전체 신청 목록 (${f.responses.length})</summary><div class="plist" style="margin-top:6px">${[...f.responses].sort((a,b)=>a.at<b.at?-1:1).map(r=>`<div class="match"><span><b>${esc(r.nick)}</b> · ${Object.entries(r.picks||{}).filter(([k,q])=>+q>0).map(([k,q])=>{const p=f.products.find(x=>x.id===k);return (p?esc(p.name):k)+' '+q+'개';}).join(', ')||'선택 없음'}</span><span class="row"><span class="muted" style="font-size:12px">${fmtDT(r.at)}</span><button class="btn s danger" data-rdel="${r.id}">삭제</button></span></div>`).join('')}</div></details>`:''}
+    </div></div>`;
+}
+function renderAdmin(g){
+  const n=g.members.length, c1=g.members.filter(paid1).length, c2=g.members.filter(paid2).length;
+  const sum1=g.members.reduce((a,m)=>a+s1(m),0), got1=g.members.reduce((a,m)=>a+(m.paid1||0),0);
+  const sum2=g.members.reduce((a,m)=>a+s2(m),0), got2=g.members.reduce((a,m)=>a+(m.paid2||0),0);
+  const noAddr=g.members.filter(m=>!hasAddr(m)).length, packed=g.members.filter(m=>m.packed).length;
+  const sorted=[...g.members].sort((a,b)=>(a.packed?1:0)-(b.packed?1:0));
+  const T=V.tabA;
+  const unpaid=g.members.filter(m=>r1(m)>0||(g.stage2Open&&r2(m)>0)).length;
+  const visit=g.members.filter(m=>m.delivery!=='convenience'), conv=g.members.filter(m=>m.delivery==='convenience');
+  const inClaude=!!(window.claude&&window.claude.use);
+  return `
+    ${tabs([{id:'status',t:'현황'},{id:'form',t:'모집폼',n:g.form.responses.length||''},{id:'members',t:'참여자',n:n},{id:'pay',t:'입금',n:unpaid||''},{id:'ship',t:'배송'},{id:'notify',t:'알림'},{id:'settings',t:'설정'}],T,'a')}
+
+    <div ${T!=='status'?'hidden':''} class="panel">
+${subtabs('status',[{id:'main',t:'현황·진행',c:'yellow'},{id:'close',t:'공구 마감',c:'red'}])}
+    <div class="subpanel yellow" ${sub('status','main')?'':'hidden'}>
+      <div class="card">
+        <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">${esc(g.title)}</h2>${statusPill(g)}</div>
+        <div class="row" style="margin:6px 0 10px"><label class="f" style="flex:1 1 200px">이 공구에서 쓰는 내 닉네임 (정산서·모집폼·인사말에 나와요)<input id="nickQuick" value="${esc(g.nick)}" placeholder="예) 이 플랫폼 닉네임 — 입력 후 Enter"></label><span class="muted" style="font-size:12px;align-self:end;padding-bottom:8px">${fmtDate(g.date)}</span></div>
+        ${g.nick?'':'<div class="band bad" style="margin-bottom:10px">닉네임이 비어 있어요. 위 칸에 적고 Enter를 누르면 바로 저장됩니다.</div>'}
+        <div class="tiles">
+          <div class="tile ${c1===n&&n?'good':''}"><small>1차 입금</small><b class="num">${c1}/${n}명</b></div>
+          <div class="tile ${sum1-got1>0?'bad':'good'}"><small>1차 미수금</small><b class="num">${won(sum1-got1)}</b></div>
+          <div class="tile ${g.stage2Open&&c2===n&&n?'good':''}"><small>2차 입금${g.stage2Open?'':' (비공개)'}</small><b class="num">${c2}/${n}명</b></div>
+          <div class="tile ${g.stage2Open&&sum2-got2>0?'bad':''}"><small>2차 미수금</small><b class="num">${won(sum2-got2)}</b></div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <span class="pill ${noAddr?'no':'ok'}">📍 배송지 ${noAddr?'미입력 '+noAddr+'명':'전원 완료'}</span>
+          <span class="pill ${packed===n&&n?'ok':''}">📦 포장 ${packed}/${n}</span>
+          <span class="pill">📎 증빙 ${g.photos.length}장</span>
+        </div>
+      </div>
+    </div><div class="subpanel red" ${sub('status','close')?'':'hidden'}>
+      <div class="card"><h2>공구 마감</h2>${g.closed?`<p style="margin:0;font-weight:700">이 공구는 ${g.closedAt?fmtDate(g.closedAt):''} 마감되었습니다.</p><p class="help">참여자 링크와 모집폼은 닫혀 있고, 기록은 그대로 보관됩니다.</p><div class="row end" style="margin-top:8px"><button class="btn s" id="reopenG">마감 취소</button></div>`
+      :`<p class="help">배송과 확인이 모두 끝나면 마감하세요. 참여자 링크·모집폼이 닫히고, 위 목록에서 빠져 "지난 공구"로 들어갑니다. 기록은 지워지지 않고 언제든 다시 볼 수 있으며, 마감 취소도 됩니다.</p><div class="row end" style="margin-top:8px"><button class="btn s danger" id="closeG">공구 마감</button></div>`}</div>
+    </div><div class="subpanel" ${sub('status','main')?'':'hidden'}>
+      <div class="card">
+        <h2>진행 단계</h2>
+        <div class="steps">${STEPS.map((s,i)=>`<button data-step="${i}" class="${i<g.step?'done':i===g.step?'now':''}">${i+1}. ${esc(s.t)}</button>`).join('')}</div>
+        <p class="help" style="margin:8px 0 10px">${g.step>=0?esc(STEPS[g.step].d):'1차 입금이 모이면 1단계로 넘기세요.'}</p>
+        <div class="row"><input id="stepMemo" placeholder="메모 (예: 배대지 입고 7박스)" style="flex:1 1 180px"><button class="btn p" id="nextStep" ${g.step>=STEPS.length-1?'disabled':''}>다음 → ${g.step<STEPS.length-1?esc(STEPS[g.step+1].t):'끝'}</button></div>
+        <details style="margin-top:10px"><summary>지금까지 기록 (${g.history.length})</summary><div style="margin-top:8px">${timeline(g)}</div></details>
+      </div>
+    </div>
+    </div>
+
+    <div ${T!=='form'?'hidden':''} class="panel">${renderFormAdmin(g)}</div>
+
+    <div ${T!=='members'?'hidden':''} class="panel">
+      <div class="card">
+        <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">참여자 ${n}명</h2><span class="row"><button class="btn s" id="formToMembers2">📋 폼에서 가져오기</button><button class="btn s p" id="addM">+ 추가</button></span></div>
+        <p class="help" style="margin:4px 0 10px">입금이나 배송지가 빠진 사람은 빨간 테두리로 표시됩니다. 포장 체크는 배송 탭에 있어요.</p>
+        <div class="plist">
+          ${g.members.map(m=>{const miss=[];if(!paid1(m))miss.push('1차 미입금');if(g.stage2Open&&!paid2(m))miss.push('2차 미입금');if(!hasAddr(m))miss.push(m.delivery==='convenience'?'편의점 미입력':'배송지 미입력');return `
+          <div class="prow c ${miss.length?'alert':''}" data-m="${m.id}">
+            <div class="nm">${esc(m.name)} <span class="muted" style="font-weight:400;font-size:12px">${esc(m.phone)}</span></div>
+            <div class="amt num">${won(s1(m))}${g.stage2Open?` <span class="muted" style="font-size:11px">+${won(s2(m))}</span>`:''}</div>
+            <div class="sm it">${m.items.map(i=>`${esc(i.n)} <b>×${i.q}</b>`).join(' · ')}</div>
+            <div class="sm">${dpill(m)} ${hasAddr(m)?esc(addrText(m))+(g.carts.length>1?' · '+cartName(g,m.cart||0):''):''}</div>
+            <div class="tools"><span class="pill ${paid1(m)?'ok':'no'}">1차 ${paid1(m)?'✅':won(r1(m))}</span><span class="pill ${!g.stage2Open?'':paid2(m)?'ok':'no'}">2차 ${!g.stage2Open?'준비중':paid2(m)?'✅':won(r2(m))}</span>${hasAddr(m)?'':`<span class="pill no">${m.delivery==='convenience'?'편의점 미입력':'배송지 미입력'}</span>`}<span style="flex:1"></span><button class="btn s" data-link="${m.id}">🔗 링크</button><button class="btn s" data-edit="${m.id}">수정</button><button class="btn s danger" data-del="${m.id}">삭제</button></div>
+          </div>`;}).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div ${T!=='pay'?'hidden':''} class="panel">
+${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).length||''},{id:'p2',t:'2차 입금',n:g.stage2Open?(g.members.filter(m=>!paid2(m)).length||''):''},{id:'match',t:'자동 대조'},{id:'ship2',t:'배송비 계산',c:'yellow'}])}
+    <div class="subpanel yellow" ${sub('pay','ship2')?'':'hidden'}>
+      <div class="card">
+        <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">배송비 계산</h2><label class="sw"><input type="checkbox" id="stage2Open" ${g.stage2Open?'checked':''}> 참여자에게 공개</label></div>
+        <div class="grp"><div class="grp-h">장바구니별 배대지 청구액</div>
+        <p class="help">국내배송비는 고정(편의점 2,500원 · 일반 4,000원). 해외배송비는 장바구니마다 배대지 청구액을 넣으면 그 장바구니 사람들끼리 나눕니다. 관세 때문에 주문을 나눴으면 장바구니를 추가하고, 아래 입금 확인에서 사람마다 몇 번 장바구니인지 고르세요. 특정 사람만 다르게 하려면 그 사람 칸에 직접 넣으세요(고정).</p>
+        ${g.carts.map((c,ci)=>{const mem=g.members.filter(m=>(m.cart||0)===ci);return `
+        <div class="prow" style="margin-top:10px">
+          <div class="nm">${ci+1}번 장바구니 <span class="muted" style="font-weight:400;font-size:13px">${mem.length}명 · ${mem.map(m=>esc(m.name)).join(', ')||'배정된 사람 없음'}</span></div>
+          <div class="amt num muted" style="font-size:13px;font-weight:400">배분 ${won(mem.reduce((a,m)=>a+(+m.overseas||0),0))}</div>
+          <div class="tools">
+            <label class="f" style="flex:1 1 120px">배대지 청구액 (원)<input data-ovtotal="${ci}" inputmode="numeric" value="${c.ovTotal||''}" placeholder="예: 25600"></label>
+            <label class="f" style="flex:1 1 120px">배분 방식<select data-ovmode="${ci}">${Object.keys(OVMODES).map(k=>`<option value="${k}" ${(c.ovMode||'equal')===k?'selected':''}>${OVMODES[k]}</option>`).join('')}</select></label>
+            <button class="btn p s" data-ovapply="${ci}" style="align-self:end">자동 배분</button>
+            ${g.carts.length>1&&!mem.length?`<button class="btn s danger" data-cartdel="${ci}" style="align-self:end">삭제</button>`:''}
+          </div>
+          ${c.ovMode==='weight'?`<div class="scroll" style="grid-column:1/3"><table class="tbl"><thead><tr><th>이름</th><th>가중치</th><th>배분액</th></tr></thead><tbody>${mem.map(m=>`<tr><td>${esc(m.name)}</td><td><input data-w="${m.id}" inputmode="decimal" value="${m.w??1}" style="width:70px;padding:3px 6px"></td><td class="num">${won(+m.overseas||0)}${m.ovManual?' (고정)':''}</td></tr>`).join('')}</tbody></table><p class="help">가중치 예: 큰 박스 2, 작은 박스 1, 봉투 0.5</p></div>`:''}
+        </div>`;}).join('')}
+        <div class="row end" style="margin-top:10px"><button class="btn s" id="cartAdd">+ 장바구니 추가</button></div></div>
+        <div class="grp"><div class="grp-h">사람별 해외배송비</div><p class="help">자동 배분된 금액입니다. 직접 바꾸면 그 사람은 고정됩니다.</p>
+        <div class="plist" style="margin-top:6px">${g.members.map(m=>`<div class="match"><span><b>${esc(m.name)}</b></span><span class="row"><input data-ov="${m.id}" inputmode="numeric" placeholder="해외배송비" value="${m.overseas||''}" style="width:110px;padding:4px 8px;font-size:14px;${m.ovManual?'border-color:var(--ink)':''}">${m.ovManual?`<button class="btn s" data-ovauto="${m.id}">고정 해제</button>`:''}<select data-dlv="${m.id}" style="width:auto;padding:4px 8px;font-size:14px"><option value="normal" ${m.delivery!=='convenience'?'selected':''}>일반 4,000</option><option value="convenience" ${m.delivery==='convenience'?'selected':''}>편의점 2,500</option></select><b class="num">= ${won(s2(m))}</b></span></div>`).join('')}</div></div>
+        ${g.carts.length>1?`<div class="grp"><div class="grp-h">장바구니 배정</div><p class="help">사람마다 몇 번 장바구니로 주문했는지 고르세요.</p>
+        <div class="plist" style="margin-top:6px">${g.members.map(m=>`<div class="match"><span><b>${esc(m.name)}</b> <span class="muted" style="font-size:12px">${m.items.map(i=>esc(i.n)+'×'+i.q).join(', ')}</span></span><select data-cart="${m.id}" style="width:auto;padding:4px 8px;font-size:14px">${g.carts.map((c,ci)=>`<option value="${ci}" ${(m.cart||0)===ci?'selected':''}>${ci+1}번 장바구니</option>`).join('')}</select></div>`).join('')}</div></div>`:''}
+      </div>
+    </div><div class="subpanel" ${sub('pay','p1')?'':'hidden'}>
+      <div class="card">
+        <h2>1차 입금 · 현지 상품 금액</h2>
+        ${g.members.length&&g.members.every(paid1)?`<div class="band" style="margin-bottom:10px">1차 입금 전체 완료입니다 :)</div>`:`<div class="band bad" style="margin-bottom:10px">1차 미입금 ${g.members.filter(m=>!paid1(m)).length}명 · ${won(g.members.reduce((a,m)=>a+r1(m),0))}</div>`}
+        <div class="plist">
+          ${[...g.members].sort((a,b)=>(paid1(a)?1:0)-(paid1(b)?1:0)).map(m=>`
+          <div class="prow c ${paid1(m)?'':'alert'}">
+            <div class="nm">${esc(m.name)}</div><div class="amt num">${won(s1(m))}</div>
+            <div class="tools">${r1(m)?`<span class="pill no">${won(r1(m))} 남음</span><button class="btn s p" data-paid1="${m.id}">전액 확인</button><input data-part1="${m.id}" inputmode="numeric" placeholder="부분 입금액" value="${m.paid1||''}">`:`<span class="pill ok">✅ 입금 확인</span><button class="btn s" data-un1="${m.id}">취소</button>`}</div>
+          </div>`).join('')||'<p class="help">참여자가 없어요</p>'}
+        </div>
+      </div>
+    </div><div class="subpanel" ${sub('pay','p2')?'':'hidden'}>
+      <div class="card">
+        <h2>2차 입금 · 배송비</h2>
+        ${!g.stage2Open?`<div class="band" style="background:var(--soft);color:var(--muted);margin-bottom:10px">2차 정산이 아직 비공개예요. "배송비 계산"에서 해외배송비를 넣고 공개하면 여기서 확인합니다.</div>`:g.members.length&&g.members.every(paid2)?`<div class="band" style="margin-bottom:10px">2차 입금 전체 완료입니다 :)</div>`:`<div class="band bad" style="margin-bottom:10px">2차 미입금 ${g.members.filter(m=>!paid2(m)).length}명 · ${won(g.members.reduce((a,m)=>a+r2(m),0))}</div>`}
+        <div class="plist">
+          ${[...g.members].sort((a,b)=>(paid2(a)?1:0)-(paid2(b)?1:0)).map(m=>`
+          <div class="prow c ${g.stage2Open&&!paid2(m)?'alert':''}">
+            <div class="nm">${esc(m.name)} ${dpill(m)}${g.carts.length>1?` <span class="muted" style="font-weight:400;font-size:12px">${cartName(g,m.cart||0)}</span>`:''}</div><div class="amt num">${won(s2(m))}</div>
+            <div class="sm">해외배송비 ${won(+m.overseas||0)} + 국내 ${won(dom(m).fee)}</div>
+            <div class="tools">${r2(m)?`<span class="pill no">${won(r2(m))} 남음</span><button class="btn s p" data-paid2="${m.id}">전액 확인</button><input data-part2="${m.id}" inputmode="numeric" placeholder="부분 입금액" value="${m.paid2||''}">`:`<span class="pill ok">✅ 입금 확인</span><button class="btn s" data-un2="${m.id}">취소</button>`}</div>
+          </div>`).join('')||'<p class="help">참여자가 없어요</p>'}
+        </div>
+      </div>
+    </div><div class="subpanel" ${sub('pay','match')?'':'hidden'}>
+      <div class="card">
+        <h2>입금 내역 자동 대조</h2>
+        <p class="help">은행 앱 입금 알림이나 거래내역을 붙여 넣으면 이름·금액으로 맞춰 줍니다. 한 줄에 한 건.</p>
+        <label class="drop" style="margin-bottom:8px">📷 입금 내역 캡처 올리기 (여러 장 가능 · 구글 OCR로 글자를 읽어 아래 칸에 넣어요)<input type="file" id="ocrIn" accept="image/*" multiple></label>
+        <textarea id="matchIn" rows="4" placeholder="예) 11/01 14:02 입금 12,500원 박정은&#10;카카오뱅크 입금 24,000원 박다현"></textarea>
+        <div class="row end" style="margin-top:8px"><button class="btn p" id="matchBtn">대조하기</button></div>
+        <div id="matchOut" class="panel" style="margin-top:8px"></div>
+      </div>
+    </div>
+    </div>
+
+    <div ${T!=='ship'?'hidden':''} class="panel">
+${subtabs('ship',[{id:'pickup',t:'택배 접수',c:'blue'},{id:'track',t:'운송장 번호'}])}
+    <div class="subpanel" ${sub('ship','pickup')?'':'hidden'}>
+      <div class="card visitcard">
+        <h2>방문택배 · 로지아이 접수 (${visit.length}명)</h2>
+        <p class="help" style="margin-bottom:8px">일반택배를 고른 사람입니다. 엑셀 다운로드는 로지아이 다량접수 양식(순번·이름·핸드폰·우편번호·주소·상세주소·박스타입·물품명·제품단가·요청사항) 그대로 만들어집니다.</p>
+        <div class="plist">${[...visit].sort((a,b)=>(a.packed?1:0)-(b.packed?1:0)).map(m=>{const r=logiRow(g,m,0);return `<div class="prow ${m.packed?'packed':''} ${(!m.addr||!m.zip)?'alert':''}"><div class="nm">${esc(m.name)} <span class="muted" style="font-weight:400;font-size:13px">${esc(m.phone)}</span> ${dpill(m)}</div><div class="amt num">${won(s1(m))}</div>
+          <ul class="pack">${m.items.map(i=>`<li><span>${esc(i.n)}</span><span class="qty">× ${i.q}</span></li>`).join('')}</ul>
+          <div class="sm">${m.addr?(m.zip?'['+esc(m.zip)+'] ':'<span style="color:var(--bad)">[우편번호 없음] </span>')+esc(fullAddr(m)):'<span style="color:var(--bad)">배송지 미입력</span>'} · 박스 ${r.box}${m.memo?' · '+esc(m.memo):''}</div>
+          <div class="tools"><label class="sw"><input type="checkbox" data-packed="${m.id}" ${m.packed?'checked':''}> 포장 완료</label><span class="pill ${paid1(m)&&(!g.stage2Open||paid2(m))?'ok':'no'}">${paid1(m)&&(!g.stage2Open||paid2(m))?'입금 완료':'미입금'}</span></div></div>`;}).join('')||'<p class="help">방문택배 대상이 없어요</p>'}</div>
+        <div class="row end" style="margin-top:10px">
+          <label class="sw"><input type="checkbox" id="onlyPaid" checked> 입금 완료자만</label>
+          <button class="btn p" id="dlLogi">로지아이 엑셀 다운로드</button>
+          <button class="btn s" id="copySheet">탭 구분 복사</button>
+        </div>
+      </div>
+      <div class="card cvscard">
+        <h2>편의점택배 · GS25 반값택배 (${conv.length}명)</h2>
+        <p class="help" style="margin-bottom:8px">GS 반값택배 접수 화면에 칸마다 붙여 넣을 수 있게 각각 복사됩니다.</p>
+        <div class="plist">${[...conv].sort((a,b)=>(a.packed?1:0)-(b.packed?1:0)).map(m=>`<div class="prow ${m.packed?'packed':''} ${m.cvs?'':'alert'}"><div class="nm">${esc(m.name)} ${dpill(m)}</div><div class="amt num">${won(s1(m))}</div>
+          <ul class="pack">${m.items.map(i=>`<li><span>${esc(i.n)}</span><span class="qty">× ${i.q}</span></li>`).join('')}</ul>
+          <div class="tools">
+            <button class="btn s" data-copy="${esc(m.name)}" data-label="성함">성함 ${esc(m.name)}</button>
+            <button class="btn s" data-copy="${esc(m.phone)}" data-label="휴대폰">휴대폰 ${esc(m.phone)}</button>
+            ${m.cvs?`<button class="btn s" data-copy="${esc(m.cvs)}" data-label="편의점명">편의점 ${esc(m.cvs)}</button>`:'<span class="pill no">편의점 미입력</span>'}
+            ${m.cvsAddr?`<button class="btn s" data-copy="${esc(m.cvsAddr)}" data-label="편의점 주소">주소 ${esc(m.cvsAddr)}</button>`:''}
+          </div>
+          <div class="tools"><label class="sw"><input type="checkbox" data-packed="${m.id}" ${m.packed?'checked':''}> 포장 완료</label><span class="pill ${paid1(m)&&(!g.stage2Open||paid2(m))?'ok':'no'}">${paid1(m)&&(!g.stage2Open||paid2(m))?'입금 완료':'미입금'}</span></div></div>`).join('')||'<p class="help">편의점택배 대상이 없어요</p>'}</div>
+      </div>
+    </div><div class="subpanel" ${sub('ship','track')?'':'hidden'}>
+      <div class="card">
+        <h2>운송장 번호</h2>
+        <p class="help" style="margin-bottom:8px">로지아이 "예약현황" 엑셀을 올리면 받는분 성함·연락처로 사람을 찾아 운송장이 한 번에 들어갑니다.</p>
+        <label class="drop" style="margin-bottom:10px">📄 로지아이 예약현황 엑셀 올리기<input type="file" id="logiStatusIn" accept=".xlsx"></label>
+        <div id="logiStatusOut" class="panel" style="margin-bottom:8px"></div>
+        <div class="row" style="margin-bottom:8px"><label class="f" style="flex:1 1 140px">택배사<select id="courierSel">${COURIERS.map(c=>`<option ${c===g.courier?'selected':''}>${c}</option>`).join('')}</select></label></div>
+        <div class="grp visit"><div class="grp-h">방문택배 (${visit.length}명)</div><p class="help" style="margin-bottom:6px">로지아이 엑셀로 자동 입력되거나 직접 넣을 수 있어요.</p>
+        <div class="plist">${visit.map(m=>`<div class="prow visit"><div class="nm">${esc(m.name)} ${dpill(m)}</div><div></div><div class="tools"><input data-track="${m.id}" placeholder="운송장 번호" value="${esc(m.tracking)}">${m.tracking?`<span class="pill ok">표시 중</span>`:''}</div></div>`).join('')||'<p class="help">없음</p>'}</div></div>
+        <div class="grp cvs"><div class="grp-h">편의점택배 (${conv.length}명)</div><p class="help" style="margin-bottom:6px">GS 반값택배는 로지아이에 안 올라오므로 접수 후 받은 번호를 직접 넣어 주세요.</p>
+        <div class="plist">${conv.map(m=>`<div class="prow cvs"><div class="nm">${esc(m.name)} ${dpill(m)} <span class="muted" style="font-weight:400;font-size:12px">${esc(m.cvs||'')}</span></div><div></div><div class="tools"><input data-track="${m.id}" placeholder="GS 반값택배 운송장 번호 (직접 입력)" value="${esc(m.tracking)}">${m.tracking?`<span class="pill ok">표시 중</span>`:''}</div></div>`).join('')||'<p class="help">없음</p>'}</div></div>
+        <p class="help" style="margin-top:8px">번호를 넣고 Enter. 참여자 화면 진행 상황 탭에 바로 뜹니다.</p>
+      </div>
+    </div>
+    </div>
+
+    <div ${T!=='notify'?'hidden':''} class="panel">
+${subtabs('notify',[{id:'all',t:'단체 알림'},{id:'s2',t:'2차 안내'},{id:'indiv',t:'미입금자 개별'}])}
+    <div class="subpanel" ${sub('notify','all')?'':'hidden'}>
+      <div class="card"><h2>단체 알림 문구</h2><pre class="msg" id="msgAll">${esc(groupMessage(g))}</pre><div class="row end" style="margin-top:8px"><button class="btn p" data-copy-el="msgAll" data-label="단체 문구">복사</button></div></div>
+    </div><div class="subpanel" ${sub('notify','s2')?'':'hidden'}>
+      <div class="card"><h2>2차 정산 안내 문구</h2><pre class="msg" id="msg2">${esc(stage2Message(g))}</pre><div class="row end" style="margin-top:8px"><button class="btn" data-copy-el="msg2" data-label="2차 안내 문구">복사</button></div></div>
+    </div><div class="subpanel" ${sub('notify','indiv')?'':'hidden'}>
+      <div class="card"><h2>미입금자 개별 문구</h2>${indivList(g).length?`<div class="plist">${indivList(g).map((x,i)=>`<div><pre class="msg" id="msgIndiv${i}">${esc(x.text)}</pre><div class="row end" style="margin-top:6px"><button class="btn s" data-copy-el="msgIndiv${i}" data-label="${esc(x.name)}님 문구">${esc(x.name)}님 문구 복사</button></div></div>`).join('')}</div><div class="row end" style="margin-top:8px"><button class="btn" data-copy="${esc(indivList(g).map(x=>x.text).join('\n\n'))}" data-label="전체 개별 문구">전부 한 번에 복사</button></div>`:'<p class="help">미입금자가 없어요</p>'}</div>
+    </div>
+    </div>
+
+    <div ${T!=='settings'?'hidden':''} class="panel">
+${subtabs('settings',[{id:'basic',t:'공구·환율'},{id:'photos',t:'증빙 사진'},{id:'acct',t:'계좌·안내'},{id:'font',t:'글꼴'},{id:'site',t:'연동'}])}
+    <div class="subpanel" ${sub('settings','basic')?'':'hidden'}>
+      <div class="card">
+        <h2>이 공구</h2>
+        <div class="grid2">
+          <label class="f">공구 이름<input id="gTitle" value="${esc(g.title)}"></label>
+          <label class="f">이 공구에서 쓰는 내 닉네임 (입력 후 Enter면 바로 저장)<input id="gNick" value="${esc(g.nick)}" placeholder="정산서 제목·인사말에 나와요"></label>
+          <label class="f">정산 날짜<input id="gDate" type="date" value="${esc(g.date)}"></label>
+          <label class="f">통화<select id="curSel">${Object.keys(CURR).map(k=>`<option value="${k}" ${g.currency===k?'selected':''}>${k} · ${CURR[k].name}</option>`).join('')}</select></label>
+          <label class="f">적용 환율 (₩/1${sym1(g)})<input id="rateIn" inputmode="decimal" value="${g.rate}"></label>
+
+        </div>
+        <p class="help" style="margin-top:6px">환율을 바꾸면 현지가가 있는 상품은 원화가 다시 계산됩니다.</p>
+        ${ratesBox(g)}
+      </div>
+    </div><div class="subpanel" ${sub('settings','photos')?'':'hidden'}>
+      <div class="card">
+        <h2>증빙 서류 사진</h2>
+        <p class="help" style="margin-bottom:8px">해외배송비 결제 내역·주문 화면. 참여자 정산서의 "증빙 서류" 버튼으로 보입니다.</p>
+        <label class="drop">📷 사진 선택 (여러 장 가능)<input type="file" id="photoIn" accept="image/*" multiple></label>
+        <div class="photos" style="margin-top:10px">${g.photos.map(p=>`<figure><img src="${p.data}" alt=""><button data-delphoto="${p.id}" aria-label="삭제">×</button><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>
+      </div>
+    </div><div class="subpanel" ${sub('settings','acct')?'':'hidden'}>
+      <div class="card">
+        <h2>입금 계좌 · 안내문</h2>
+        <div class="grid3">
+          <label class="f">은행<input id="sBank" value="${esc(S.seller.bank)}"></label>
+          <label class="f">계좌번호<input id="sAcct" value="${esc(S.seller.acct)}"></label>
+          <label class="f">예금주<input id="sHolder" value="${esc(S.seller.holder)}"></label>
+        </div>
+        <label class="f" style="margin-top:8px">정산서 하단 안내문<textarea id="sNotice" rows="7">${esc(S.notice)}</textarea></label>
+      </div>
+    </div><div class="subpanel" ${sub('settings','font')?'':'hidden'}>
+      <div class="card">
+        <h2>글꼴</h2>
+        <div class="grid2">
+          <div><p class="help" style="margin-bottom:6px">본문 (숫자·주소·안내문)</p><div class="fontprev">${FONTS_BODY.map(([f,l])=>`<button data-fb="${f}" aria-pressed="${S.seller.fontBody===f}" style="font-family:'${f}'">정산서 12,500원 받는 분 박정은<small>${l}</small></button>`).join('')}</div></div>
+          <div><p class="help" style="margin-bottom:6px">제목 (사이트 이름·탭·카드 제목)</p><div class="fontprev">${FONTS_TITLE.map(([f,l])=>`<button data-ft="${f}" aria-pressed="${S.seller.fontTitle===f}" style="font-family:'${f}'">1차 정산서 · 진행 상황<small>${l}</small></button>`).join('')}</div></div>
+        </div>
+      </div>
+    </div><div class="subpanel" ${sub('settings','site')?'':'hidden'}>
+      <div class="card">
+        <h2>사이트 · 연동</h2>
+        <label class="f">사이트 주소 (개인 링크 앞부분)<input id="sSite" value="${esc(S.seller.siteUrl)}" placeholder="https://아이디.github.io/gongu/"></label>
+        <label class="f" style="margin-top:8px">구글 시트 연동 주소 (Apps Script 웹앱 URL)<input id="sSync" value="${esc(S.seller.syncUrl)}"></label>
+        <label class="f" style="margin-top:8px">관리자 비밀번호 (Apps Script의 ADMIN_KEY와 같게 · 이 기기에만 저장)<input id="sKey" type="password" value="${esc(V.adminKey||'')}" autocomplete="off"></label>
+        <p class="help" style="margin-top:6px">${inClaude?'이 화면(클로드 안)에서는 외부 접속이 막혀 시트 연동이 동작하지 않습니다. 독립 파일을 사이트에 올리면 동작합니다.':'비밀번호가 맞으면 저장할 때마다 시트에 올라가고, 열 때 시트에서 불러옵니다.'}</p>
+        <div class="row end" style="margin-top:10px"><button class="btn danger s" id="delG">이 공구 삭제</button>${STANDALONE_BUILD?'':'<button class="btn s" id="resetAll">예시 데이터로 초기화</button>'}<button class="btn p" id="saveSet">설정 저장</button></div>
+      </div>
+    </div>
+    </div>`;
+}
+function groupMessage(g){
+  const head=`[${g.title} 공구] 💌\n상황 공유드립니다 :)`;
+  if(g.step<0) return `${head}\n🧸 현재 : 1차 입금 확인 중 (${g.members.filter(paid1).length}/${g.members.length}명)\n✈️ 다음 단계 : 입금이 모이면 바로 주문할게요!\n오늘도 행복 가득 하루 되세요 ! 🌷💛`;
+  const s=STEPS[g.step], h=g.history.find(x=>x.step===g.step), nx=STEPS[g.step+1];
+  return `${head}\n🧸 현재 : ${s.t}${h&&h.memo?` (${h.memo})`:''}\n✈️ 다음 단계 : ${nx?nx.t:'끝! 모두 받으셨는지 확인해 주세요'}${s.k==='ship'?'\n📦 운송장 번호는 각자 정산서 링크에서 확인할 수 있어요':''}\n오늘도 행복 가득 하루 되세요 ! 🌷💛`;
+}
+function stage2Message(g){return `[${g.title} 공구] 💌\n2차 정산(해외배송비 + 국내배송비) 안내드립니다 :)\n🧾 각자 정산서 링크에서 금액 확인 후 입금 부탁드려요\n🏦 ${S.seller.bank} ${S.seller.acct} (${S.seller.holder})\n📎 배송비 결제 내역은 정산서의 "증빙 서류"에서 볼 수 있어요\n오늘도 행복 가득 하루 되세요 ! 🌷💛`;}
+function indivList(g){return g.members.filter(m=>r1(m)>0||(g.stage2Open&&r2(m)>0)).map(m=>{const parts=[];if(r1(m))parts.push(`1차 ${won(r1(m))}`);if(g.stage2Open&&r2(m))parts.push(`2차 ${won(r2(m))}`);return {name:m.name,text:`${m.name}님 안녕하세요 🙂 [${g.title} 공구] ${parts.join(' + ')} 입금 부탁드려요 💛\n${S.seller.bank} ${S.seller.acct} (${S.seller.holder})\n오늘도 행복 가득 하루 되세요 ! 🌷`};});}
+function indivMessages(g){return indivList(g).map(x=>x.text).join('\n\n');}
+
+/* 이벤트 */
+function bind(){
+  const app=document.getElementById('app'); const g=G();
+  app.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{V.mode=b.dataset.mode;saveView();render();});
+  app.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{const [k,id]=b.dataset.tab.split(':');if(k==='a')V.tabA=id;else V.tabM=id;saveView();render();});
+  app.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>{const [k,id]=b.dataset.sub.split(':');V.sub[k]=id;saveView();render();});
+  app.querySelectorAll('.chips [data-g]').forEach(b=>b.onclick=()=>{V.gid=b.dataset.g;V.mid=null;saveView();render();});
+  const sp=document.getElementById('showPast'); if(sp) sp.onclick=()=>{V.showPast=!V.showPast;saveView();render();};
+  const cg=document.getElementById('closeG'); if(cg) cg.onclick=e=>{if(e.target.dataset.armed){g.closed=true;g.closedAt=now();g.form.open=false;V.gid=S.groups.find(x=>!x.closed)?.id||g.id;save();render();toast('공구를 마감했어요. 참여자 링크는 닫히고 기록은 지난 공구에 남습니다');}else{e.target.dataset.armed='1';e.target.textContent='정말 마감? (다시 누르기)';}};
+  const rg=document.getElementById('reopenG'); if(rg) rg.onclick=()=>{g.closed=false;g.closedAt='';save();render();toast('마감을 취소했어요. 참여자 링크가 다시 열립니다');};
+  app.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy,b.dataset.label));
+  app.querySelectorAll('[data-copy-el]').forEach(b=>b.onclick=()=>copyText(document.getElementById(b.dataset.copyEl).textContent,b.dataset.label));
+  const ag=document.getElementById('addG'); if(ag) ag.onclick=addGroup;
+  if(!g) return;
+  const M=id=>g.members.find(x=>x.id===id);
+  const m=g.members.find(x=>x.id===V.mid)||g.members[0];
+
+  const pick=document.getElementById('pickM'); if(pick) pick.onchange=e=>{V.mid=e.target.value;saveView();render();};
+  const ea=document.getElementById('editAddr'); if(ea) ea.onclick=()=>{document.getElementById('addrForm').hidden=false;ea.hidden=true;};
+  const ad=document.getElementById('a_delivery'); if(ad) ad.onchange=()=>{document.getElementById('a_home').hidden=ad.value==='convenience';document.getElementById('a_cvsbox').hidden=ad.value!=='convenience';};
+  const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();m.name=v('a_name');m.phone=v('a_phone');m.delivery=v('a_delivery');if(m.delivery==='convenience'){m.cvs=v('a_cvs');m.cvsAddr=v('a_cvsAddr');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
+  app.querySelectorAll('[data-proof]').forEach(op=>op.onclick=()=>openModal(`<div class="row between"><h2 class="t" style="font-size:19px">📎 증빙 서류 (${g.photos.length}장)</h2><button class="btn s" data-close>닫기</button></div>${g.photos.map(p=>`<figure class="pic"><img src="${p.data}" alt="${esc(p.name)}"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}<div class="row end" style="margin-top:10px"><button class="btn" data-close>닫기</button></div>`));
+  app.querySelectorAll('[data-saveimg]').forEach(si=>si.onclick=async()=>{
+    if(typeof html2canvas!=='function'){toast('이미지 변환 도구를 불러오지 못했어요');return;}
+    const el=document.getElementById(si.dataset.saveimg); toast('이미지 만드는 중…');
+    try{const cv=await html2canvas(el,{backgroundColor:getComputedStyle(el).backgroundColor,scale:2,useCORS:true});cv.toBlob(b=>saveFile(`${g.title}_${m.name}_${si.dataset.title}.png`,b),'image/png');}catch(e){toast('이미지 변환 실패: '+e.message);}
+  });
+  const rf=document.getElementById('recruitForm'); if(rf) rf.onsubmit=e=>{e.preventDefault();const nick=v('r_nick');if(!nick)return toast('닉네임을 입력해 주세요');const picks={};let any=false;rf.querySelectorAll('[data-pick]').forEach(sel=>{const q=+sel.value||0;if(q){picks[sel.dataset.pick]=q;any=true;}});if(!any)return toast('수량을 하나 이상 골라 주세요 (모두 0개예요)');
+    V.formReview={gid:g.id,nick,picks}; V.formStep=V.formStep||{}; V.formStep[g.id]='review'; saveView(); render();};
+  if(rf){ const upd=()=>{let qty=0,items=0;const parts=[];rf.querySelectorAll('[data-pick]').forEach(sel=>{const q=+sel.value||0;const p=g.form.products.find(x=>x.id===sel.dataset.pick);if(q&&p){qty+=q;items+=(p.price||0)*q;parts.push(esc(p.name)+' ×'+q);}});
+      const box=document.getElementById('estBox'),ok=document.getElementById('estOk'),nx=document.getElementById('pickNext');
+      if(!qty){box.hidden=true;ok.checked=false;nx.disabled=true;return;}
+      box.hidden=false;const ov=qty*3000,tot=items+ov+DOMESTIC.normal.fee;
+      document.getElementById('estItems').textContent=won(items);document.getElementById('estItemsQ').textContent=parts.join(', ');document.getElementById('estQty').textContent=qty;document.getElementById('estOversea').textContent='약 '+won(ov);document.getElementById('estTotal').textContent='약 '+won(tot);nx.disabled=!ok.checked;};
+    rf.querySelectorAll('[data-pick]').forEach(sel=>sel.onchange=()=>{document.getElementById('estOk').checked=false;upd();});const eo=document.getElementById('estOk'); if(eo) eo.onchange=upd; upd(); }
+  const rb=document.getElementById('reviewBack'); if(rb) rb.onclick=()=>{V.formStep[g.id]='pick';saveView();render();};
+  const ro=document.getElementById('reviewOk'); if(ro) ro.onclick=()=>{const rv=V.formReview; if(!rv||rv.gid!==g.id) return; const r={id:uid(8),nick:rv.nick,at:now(),picks:rv.picks}; g.form.responses.push(r); if(formDone(g)){g.form.open=false;} V.formDone=g.id; V.formReview=null; V.formStep[g.id]='welcome'; saveView(); if(formView&&canFetch()){pushResponse(g,r);}else{save();} render(); toast('신청했어요');};
+  const frs=document.getElementById('formReset'); if(frs) frs.onclick=()=>{V.formDone=null;V.formReview=null;V.formStep=V.formStep||{};V.formStep[g.id]='welcome';saveView();render();toast('미리보기를 처음 화면으로 돌렸어요');};
+  const fa=document.getElementById('formAgain'); if(fa) fa.onclick=()=>{V.formDone=null;saveView();render();};
+  const nk=document.getElementById('noticeOk'); if(nk){nk.onchange=()=>{document.getElementById('noticeNext').disabled=!nk.checked;};}
+  const nn=document.getElementById('noticeNext'); if(nn) nn.onclick=()=>{V.formStep=V.formStep||{};V.formStep[g.id]='pick';saveView();render();};
+  const nb=document.getElementById('noticeBack'); if(nb) nb.onclick=()=>{V.formStep=V.formStep||{};V.formStep[g.id]='notice';saveView();render();};
+  const wn=document.getElementById('welcomeNext'); if(wn) wn.onclick=()=>{V.formStep=V.formStep||{};V.formStep[g.id]='notice';saveView();render();};
+  if(personal||formView) return;
+  const fo=document.getElementById('formOpen'); if(fo) fo.onchange=()=>{g.form.open=fo.checked;save();render();};
+  const fl=document.getElementById('formLink'); if(fl) fl.onclick=()=>{const base=(S.seller.siteUrl||location.href.split('#')[0]).split('#')[0];copyText(base+'#f-'+g.id,'폼 링크');};
+  const lu=document.getElementById('limitUSD'); if(lu) lu.onchange=()=>{g.form.limitUSD=+lu.value||0;save();render();};
+  const ml=document.getElementById('marginLocal'); if(ml) ml.onchange=()=>{g.form.margin=+String(ml.value).replace(/[^\d.]/g,'')||0;save();render();};
+  app.querySelectorAll('input[name=basis]').forEach(r=>r.onchange=()=>{g.form.basis=r.value;save();render();});
+  const ftm2=document.getElementById('formToMembers2'); if(ftm2) ftm2.onclick=()=>importFromForm(g);
+  const fsv=document.getElementById('formSave'); if(fsv) fsv.onclick=()=>{g.form.deadline=v('formDeadline');g.form.openAt=v('formOpenAt');g.form.welcome=v('formWelcome');g.form.intro=v('formIntro');g.form.store=v('formStore');g.form.itemsText=v('formItems');g.form.priceText=v('formPrice');g.form.extra=v('formExtra');g.form.rules=v('formRules');save();render();toast('저장했어요');};
+  const pa=document.getElementById('prodAdd'); if(pa) pa.onclick=()=>{g.form.products.push(blankProduct());save();render();};
+  app.querySelectorAll('[data-pf]').forEach(i=>i.onchange=()=>{const p=g.form.products.find(x=>x.id===i.dataset.pid);if(!p)return;const f=i.dataset.pf;p[f]=f==='name'?i.value.trim():(+String(i.value).replace(/[^\d.]/g,'')||0);if(f==='maxPer'&&p.maxPer<1)p.maxPer=1;if(f==='minTarget'&&p.minTarget<1)p.minTarget=1;if(p.fx)p.price=Math.round(p.fx*g.rate);save();render();});
+  app.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{g.form.products=g.form.products.filter(x=>x.id!==b.dataset.pdel);save();render();});
+  app.querySelectorAll('[data-pphoto]').forEach(i=>i.onchange=async()=>{const p=g.form.products.find(x=>x.id===i.dataset.pphoto);const f=i.files[0];if(!p||!f)return;try{p.photo=await shrink(f,600,.8);save();render();}catch(e){toast('사진 처리 실패');}});
+  app.querySelectorAll('[data-rdel]').forEach(b=>b.onclick=()=>{g.form.responses=g.form.responses.filter(x=>x.id!==b.dataset.rdel);save();render();});
+  const ftm=document.getElementById('formToMembers'); if(ftm) ftm.onclick=()=>importFromForm(g);
+
+  const nq=document.getElementById('nickQuick'); if(nq) nq.onchange=()=>{g.nick=nq.value.trim();save();render();toast(g.nick?'닉네임 "'+g.nick+'" 저장':'닉네임을 지웠어요');};
+  ['gTitle','gNick','gDate'].forEach(id=>{const e=document.getElementById(id); if(e) e.onchange=()=>{g.title=v('gTitle')||g.title;g.nick=v('gNick');g.date=v('gDate')||g.date;save();render();toast('저장했어요');};});
+  app.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const i=+b.dataset.step;g.step=i;if(!g.history.find(h=>h.step===i))g.history.push({step:i,at:now(),memo:''});g.history=g.history.filter(h=>h.step<=i);save();render();});
+  const ns=document.getElementById('nextStep'); if(ns) ns.onclick=()=>{if(g.step>=STEPS.length-1)return;g.step++;g.history.push({step:g.step,at:now(),memo:v('stepMemo')});save();render();toast(`${STEPS[g.step].t} 단계로 바뀌었어요. 알림 탭 문구가 갱신됐습니다`);};
+  app.querySelectorAll('[data-paid1]').forEach(b=>b.onclick=()=>{const x=M(b.dataset.paid1);x.paid1=s1(x);save();render();});
+  app.querySelectorAll('[data-un1]').forEach(b=>b.onclick=()=>{M(b.dataset.un1).paid1=0;save();render();});
+  app.querySelectorAll('[data-part1]').forEach(i=>i.onchange=()=>{M(i.dataset.part1).paid1=+String(i.value).replace(/\D/g,'')||0;save();render();});
+  app.querySelectorAll('[data-paid2]').forEach(b=>b.onclick=()=>{const x=M(b.dataset.paid2);x.paid2=s2(x);save();render();});
+  app.querySelectorAll('[data-un2]').forEach(b=>b.onclick=()=>{M(b.dataset.un2).paid2=0;save();render();});
+  app.querySelectorAll('[data-part2]').forEach(i=>i.onchange=()=>{M(i.dataset.part2).paid2=+String(i.value).replace(/\D/g,'')||0;save();render();});
+  app.querySelectorAll('[data-ov]').forEach(i=>i.onchange=()=>{const x=M(i.dataset.ov);x.overseas=+String(i.value).replace(/\D/g,'')||0;x.ovManual=true;distribute(g);save();render();});
+  app.querySelectorAll('[data-ovauto]').forEach(b=>b.onclick=()=>{M(b.dataset.ovauto).ovManual=false;distribute(g);save();render();});
+  app.querySelectorAll('[data-w]').forEach(i=>i.onchange=()=>{M(i.dataset.w).w=+i.value||0;distribute(g);save();render();});
+  app.querySelectorAll('[data-ovtotal]').forEach(i=>i.onchange=()=>{g.carts[+i.dataset.ovtotal].ovTotal=+String(i.value).replace(/\D/g,'')||0;distribute(g);save();render();});
+  app.querySelectorAll('[data-ovmode]').forEach(i=>i.onchange=()=>{g.carts[+i.dataset.ovmode].ovMode=i.value;distribute(g);save();render();});
+  app.querySelectorAll('[data-ovapply]').forEach(b=>b.onclick=()=>{const ci=+b.dataset.ovapply;g.carts[ci].ovTotal=+String(app.querySelector('[data-ovtotal="'+ci+'"]').value).replace(/\D/g,'')||0;g.carts[ci].ovMode=app.querySelector('[data-ovmode="'+ci+'"]').value;distribute(g);save();render();toast((ci+1)+'번 장바구니를 '+OVMODES[g.carts[ci].ovMode]+'로 배분했어요');});
+  app.querySelectorAll('[data-cartdel]').forEach(b=>b.onclick=()=>{g.carts.splice(+b.dataset.cartdel,1);g.members.forEach(m=>{if(m.cart>=g.carts.length)m.cart=0;});save();render();});
+  app.querySelectorAll('[data-cart]').forEach(i=>i.onchange=()=>{M(i.dataset.cart).cart=+i.value;distribute(g);save();render();});
+  const ca=document.getElementById('cartAdd'); if(ca) ca.onclick=()=>{g.carts.push(blankCart());save();render();toast(g.carts.length+'번 장바구니를 추가했어요. 입금 확인에서 사람을 배정하세요');};
+  app.querySelectorAll('[data-dlv]').forEach(i=>i.onchange=()=>{M(i.dataset.dlv).delivery=i.value;save();render();});
+  const so=document.getElementById('stage2Open'); if(so) so.onchange=()=>{g.stage2Open=so.checked;save();render();toast(so.checked?'2차 정산을 공개했어요':'2차 정산을 숨겼어요');};
+  app.querySelectorAll('[data-track]').forEach(i=>i.onchange=()=>{const x=M(i.dataset.track);x.tracking=i.value.trim();save();render();toast(x.name+' 운송장 저장');});
+  app.querySelectorAll('[data-packed]').forEach(i=>i.onchange=()=>{M(i.dataset.packed).packed=i.checked;save();render();});
+  app.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{const x=M(b.dataset.del);if(b.dataset.armed){g.members=g.members.filter(y=>y!==x);save();render();}else{b.dataset.armed='1';b.textContent='정말 삭제?';}});
+  app.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>editMember(g,M(b.dataset.edit)));
+  app.querySelectorAll('[data-link]').forEach(b=>b.onclick=()=>{const base=(S.seller.siteUrl||location.href.split('#')[0]).split('#')[0];copyText(base+'#p-'+b.dataset.link,M(b.dataset.link).name+'님 개인 링크');if(!S.seller.siteUrl)toast('설정 탭 "사이트 주소"를 넣으면 정확한 링크가 복사됩니다');});
+  const am=document.getElementById('addM'); if(am) am.onclick=()=>{const x=blankMember();g.members.push(x);save();editMember(g,x,true);};
+  const cs=document.getElementById('courierSel'); if(cs) cs.onchange=e=>{g.courier=e.target.value;save();render();};
+  const rowsForLogi=()=>{const only=document.getElementById('onlyPaid').checked;return g.members.filter(x=>x.delivery!=='convenience').filter(x=>!only||(paid1(x)&&(!g.stage2Open||paid2(x)))).map((x,i)=>logiRow(g,x,i));};
+  const dl=document.getElementById('dlLogi'); if(dl) dl.onclick=()=>{const rows=rowsForLogi();if(!rows.length)return toast('내보낼 사람이 없어요');const miss=rows.filter(r=>!r.addr||!r.zip).length;if(miss)toast(`주소/우편번호 없는 ${miss}명은 빈칸으로 들어가요`);const u8=buildLogiXlsx(rows);saveFile(`로지아이_${g.title}_${new Date().toISOString().slice(0,10)}.xlsx`,new Blob([u8]));};
+  const cp=document.getElementById('copySheet'); if(cp) cp.onclick=()=>copyText(rowsForLogi().map(r=>[r.i,r.name,r.phone,'',r.zip,r.addr,r.addr2,r.box,r.item,r.priceMan,r.memo].join('\t')).join('\n'),'접수표');
+  const mb=document.getElementById('matchBtn'); if(mb) mb.onclick=()=>{
+    const lines=v('matchIn').split('\n').map(s=>s.trim()).filter(Boolean); const out=document.getElementById('matchOut'); if(!lines.length){out.innerHTML='';return;}
+    out.innerHTML=lines.map(line=>{
+      const amtM=line.replace(/,/g,'').match(/(\d{3,})\s*원?/); const amt=amtM?+amtM[1]:0;
+      const who=g.members.filter(x=>x.name&&line.includes(x.name));
+      if(!who.length||!amt) return `<div class="match"><span>${esc(line)}</span><span class="pill">이름/금액 못 찾음</span></div>`;
+      const x=who[0]; let target='';
+      if(amt===r1(x)) target='1'; else if(g.stage2Open&&amt===r2(x)) target='2'; else if(g.stage2Open&&amt===r1(x)+r2(x)) target='12';
+      if(!target) return `<div class="match"><span>${esc(x.name)} ${won(amt)}</span><span class="pill no">남은 금액과 다름 (1차 ${won(r1(x))}${g.stage2Open?` · 2차 ${won(r2(x))}`:''})</span><button class="btn s" data-apply="${x.id}:1:${amt}">1차에 반영</button></div>`;
+      return `<div class="match"><span>${esc(x.name)} ${won(amt)}</span><span class="pill ok">${target==='12'?'1차+2차':target+'차'} 일치</span><button class="btn s p" data-apply="${x.id}:${target}:${amt}">입금 확인</button></div>`;
+    }).join('');
+    out.querySelectorAll('[data-apply]').forEach(b=>b.onclick=()=>{const [id,t,a]=b.dataset.apply.split(':');const x=M(id);if(t==='1')x.paid1=(x.paid1||0)+ +a;else if(t==='2')x.paid2=(x.paid2||0)+ +a;else{x.paid1=s1(x);x.paid2=s2(x);}save();render();toast(x.name+' 입금 반영');});
+  };
+  const ls=document.getElementById('logiStatusIn'); if(ls) ls.onchange=async()=>{const f=ls.files[0]; if(!f) return; const out=document.getElementById('logiStatusOut');
+    try{ const rows=await readLogiStatus(f); const digits=x=>String(x||'').replace(/\D/g,''); let hit=0; const lines=[];
+      rows.forEach(r=>{ const nm=r.name.trim(); const pre=digits(r.phone).slice(0,7);
+        let cands=g.members.filter(m=>m.name.trim()===nm); if(cands.length>1&&pre) cands=cands.filter(m=>digits(m.phone).startsWith(pre)); if(!cands.length&&pre) cands=g.members.filter(m=>digits(m.phone).startsWith(pre)&&digits(m.phone).length>=10);
+        if(cands.length===1){ cands[0].tracking=r.tracking; hit++; lines.push(`<div class="match"><span>${esc(nm)} → ${esc(cands[0].name)}</span><span class="pill ok num">${esc(r.tracking)}</span></div>`); }
+        else lines.push(`<div class="match"><span>${esc(nm)} ${esc(r.phone)}</span><span class="pill no">${cands.length?'같은 이름이 여러 명':'참여자 중 없음'} · ${esc(r.tracking)}</span></div>`); });
+      save(); render(); const out2=document.getElementById('logiStatusOut'); out2.innerHTML=`<p class="help">${rows.length}건 중 ${hit}명에게 운송장을 넣었어요.</p>`+lines.join(''); toast(`운송장 ${hit}건 입력`);
+    }catch(e){ out.innerHTML=`<p class="help" style="color:var(--bad)">읽지 못했어요: ${esc(e.message)}</p>`; }
+  };
+  const oi=document.getElementById('ocrIn'); if(oi) oi.onchange=async()=>{ if(!canFetch()){toast('사진 글자 읽기는 사이트에 올린 뒤 구글 OCR로 동작합니다. 지금은 글로 붙여 넣어 주세요');return;} if(!V.adminKey){toast('설정 탭에 관리자 비밀번호를 먼저 넣어 주세요');return;}
+    const ta=document.getElementById('matchIn'); let all=ta.value.trim(); toast('사진 읽는 중…');
+    for(const f of Array.from(oi.files)){ try{ const data=await shrink(f,1600,.9); const r=await fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,ocr:data})}); const j=await r.json(); if(j&&j.text){ all=(all?all+'\n':'')+j.text.split('\n').map(x=>x.trim()).filter(x=>/\d{3,}/.test(x)).join('\n'); } else toast('읽기 실패: '+(j&&j.error||'')); }catch(e){toast('읽기 실패');} }
+    ta.value=all; document.getElementById('matchBtn').click(); };
+  const pi=document.getElementById('photoIn'); if(pi){pi.onchange=()=>addPhotos(g,pi.files);}
+  app.querySelectorAll('[data-delphoto]').forEach(b=>b.onclick=()=>{g.photos=g.photos.filter(p=>p.id!==b.dataset.delphoto);save();render();});
+  const cu=document.getElementById('curSel'); if(cu) cu.onchange=e=>{g.currency=e.target.value;g.rate=(S.rates&&S.rates[g.currency])||CURR[g.currency].rate;recalc(g);recalcProducts(g);save();render();};
+  const ri=document.getElementById('rateIn'); if(ri) ri.onchange=e=>{g.rate=+e.target.value||g.rate;recalc(g);recalcProducts(g);save();render();toast('환율 '+g.rate+' 적용');};
+  app.querySelectorAll('[data-applyrate]').forEach(b=>b.onclick=()=>{const r=S.rates&&S.rates[g.currency];if(!r)return;g.rate=+r.toFixed(2);recalc(g);recalcProducts(g);save();render();toast('오늘 환율 '+g.rate+' 적용');});
+  app.querySelectorAll('[data-ratesrefresh]').forEach(b=>b.onclick=()=>fetchRates(true));
+  app.querySelectorAll('[data-fb]').forEach(b=>b.onclick=()=>{S.seller.fontBody=b.dataset.fb;save();render();});
+  app.querySelectorAll('[data-ft]').forEach(b=>b.onclick=()=>{S.seller.fontTitle=b.dataset.ft;save();render();});
+  const ss=document.getElementById('saveSet'); if(ss) ss.onclick=()=>{g.title=v('gTitle');g.nick=v('gNick');g.date=v('gDate')||g.date;S.seller.bank=v('sBank');S.seller.acct=v('sAcct');S.seller.holder=v('sHolder');S.notice=v('sNotice');S.seller.siteUrl=v('sSite');S.seller.syncUrl=v('sSync');V.adminKey=v('sKey');saveView();save();render();toast('저장했어요');};
+  const dg=document.getElementById('delG'); if(dg) dg.onclick=e=>{if(e.target.dataset.armed){S.groups=S.groups.filter(x=>x!==g);V.gid=S.groups[0]?.id;save();render();}else{e.target.dataset.armed='1';e.target.textContent='정말 삭제? (다시 누르기)';}};
+  const ra=document.getElementById('resetAll'); if(ra) ra.onclick=e=>{if(e.target.dataset.armed){S=seed();V.gid=S.groups[0].id;V.mid=null;save();saveView();render();}else{e.target.dataset.armed='1';e.target.textContent='정말 초기화? (다시 누르기)';}};
+}
+function importFromForm(g){const {alloc}=allocate(g);if(!alloc.length)return toast('배정된 신청이 없어요');const byNick={};alloc.forEach(a=>{(byNick[a.nick]=byNick[a.nick]||[]).push(a);});let added=0;
+  Object.entries(byNick).forEach(([nick,list])=>{let m=g.members.find(x=>x.name===nick);if(!m){m=blankMember();m.name=nick;g.members.push(m);added++;}m.items=list.map(a=>{const p=g.form.products.find(x=>x.id===a.pid);return {n:a.name,q:a.q,p:p&&p.fx?Math.round(p.fx*g.rate):(a.price||0),fx:p&&p.fx?p.fx:0};});});
+  distribute(g);save();V.tabA='members';saveView();render();toast(`참여자 ${added}명 추가, ${Object.keys(byNick).length}명 구매 내역 반영`);}
+function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function addGroup(){const g=blankGroup('새 공구 '+(S.groups.length+1));S.groups.push(g);V.gid=g.id;V.mid=null;V.mode='admin';V.tabA='settings';save();saveView();render();toast('새 공구를 만들었어요. 이름과 닉네임을 정해 주세요');}
+function openModal(html){const md=document.getElementById('modal');md.innerHTML=`<div class="box">${html}</div>`;md.hidden=false;md.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>md.hidden=true);md.onclick=e=>{if(e.target===md)md.hidden=true;};}
+async function addPhotos(g,files){
+  for(const f of Array.from(files||[])){ if(!f.type.startsWith('image/')) continue;
+    try{const data=await shrink(f,1200,.82);g.photos.push({id:uid(6),name:f.name,data});}catch(e){toast(f.name+' 처리 실패');}
+  }
+  save();render();toast('사진을 추가했어요');
+}
+function shrink(file,max,q){return new Promise((res,rej)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{const r=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q));};img.onerror=rej;img.src=url;});}
+
+function editMember(g,m,isNew){
+  const row=document.querySelector(`.prow[data-m="${m.id}"]`)||document.querySelector('.plist');
+  const box=document.createElement('div');box.className='card';box.style.border='2px solid var(--ok-strong)';
+  const draw=()=>{box.innerHTML=`
+    <h2>${isNew?'참여자 추가':m.name+' 수정'}</h2>
+    <div class="grid2"><label class="f">이름<input id="e_name" value="${esc(m.name)}"></label><label class="f">연락처<input id="e_phone" value="${esc(m.phone)}"></label>
+      <label class="f">우편번호<input id="e_zip" value="${esc(m.zip)}"></label><label class="f">국내 배송<select id="e_dlv"><option value="normal" ${m.delivery!=='convenience'?'selected':''}>일반택배 4,000</option><option value="convenience" ${m.delivery==='convenience'?'selected':''}>편의점택배 2,500</option></select></label></div>
+    <label class="f" style="margin-top:8px">주소<input id="e_addr" value="${esc(m.addr)}" placeholder="비워 두면 참여자가 직접 입력"></label>
+    <div class="grid2" style="margin-top:8px"><label class="f">상세주소<input id="e_addr2" value="${esc(m.addr2)}"></label><label class="f">장바구니<select id="e_cart">${g.carts.map((c,ci)=>`<option value="${ci}" ${(m.cart||0)===ci?'selected':''}>${ci+1}번 장바구니</option>`).join('')}</select></label><label class="f">로지아이 박스타입<select id="e_box"><option value="">자동 (${dom(m).box})</option>${'XSABCDEF'.split('').map(b=>`<option ${m.box===b?'selected':''}>${b}</option>`).join('')}</select></label></div>
+    <label class="f" style="margin-top:8px">요청사항<input id="e_memo" value="${esc(m.memo)}" maxlength="30"></label>
+    <div class="grid2" style="margin-top:8px"><label class="f">편의점택배일 때 · 도착 편의점명 (GS25)<input id="e_cvs" value="${esc(m.cvs)}" placeholder="GS25 목동중앙점"></label><label class="f">도착 편의점 주소<input id="e_cvsAddr" value="${esc(m.cvsAddr)}"></label></div>
+    <p class="help" style="margin:10px 0 4px">구매 내역: 상품명 · 수량 · 현지가(${sym1(g)}) · 개당 원화. 현지가를 넣으면 원화는 <b>현지가 × ${g.rate}</b>로 자동 계산되고 정산서에 계산식이 보입니다.</p>
+    <div class="items">${m.items.map((i,k)=>`<div class="it"><input data-k="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-k="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-k="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-k="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><button class="x" data-rm="${k}">×</button></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn s" id="e_add">+ 상품 추가</button><span class="muted" style="font-size:13px">1차 합계 <b class="num">${won(s1(m))}</b></span></div>
+    <div class="row end" style="margin-top:10px"><button class="btn s" id="e_cancel">닫기</button><button class="btn p" id="e_save">저장</button></div>`;
+    const pull=()=>{m.name=box.querySelector('#e_name').value.trim();m.phone=box.querySelector('#e_phone').value.trim();m.zip=box.querySelector('#e_zip').value.trim();m.delivery=box.querySelector('#e_dlv').value;m.addr=box.querySelector('#e_addr').value.trim();m.addr2=box.querySelector('#e_addr2').value.trim();m.box=box.querySelector('#e_box').value;m.cart=+box.querySelector('#e_cart').value||0;m.memo=box.querySelector('#e_memo').value.trim();m.cvs=box.querySelector('#e_cvs').value.trim();m.cvsAddr=box.querySelector('#e_cvsAddr').value.trim();
+      box.querySelectorAll('.it input').forEach(i=>{const it=m.items[+i.dataset.k];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.items.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});};
+    box.querySelectorAll('.it input').forEach(i=>i.onchange=()=>{pull();draw();});
+    box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{pull();m.items.splice(+b.dataset.rm,1);draw();});
+    box.querySelector('#e_add').onclick=()=>{pull();m.items.push({n:'',q:1,p:0,fx:0});draw();};
+    box.querySelector('#e_cancel').onclick=()=>{if(isNew&&!m.name){g.members=g.members.filter(x=>x!==m);save();}render();};
+    box.querySelector('#e_save').onclick=()=>{pull();if(!m.name){toast('이름을 입력해 주세요');return;}m.items=m.items.filter(i=>i.n);if(!m.items.length)m.items=[{n:'(상품 미정)',q:1,p:0,fx:0}];distribute(g);save();render();toast('저장했어요');};
+  };
+  draw();row.after(box);box.querySelector('#e_name').focus();
+}
+
+/* 구글 시트 연동: 관리자는 비밀번호로 전체 저장·불러오기, 참여자는 자기 아이디로 자기 것만 */
+const canFetch=()=>!!(S.seller&&S.seller.syncUrl)&&!(window.claude&&window.claude.use);
+let syncTimer=null;
+function syncPush(){ if(!canFetch()||!V.adminKey||personal) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>{try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,state:S})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('시트 저장 실패: '+j.error);}).catch(()=>{});}catch(e){}},800); }
+function pushResponse(g,r){ try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({form:g.id,response:r})}).then(x=>x.json()).then(j=>{if(j&&j.closed&&j.error){g.form.open=false;g.form.responses=g.form.responses.filter(x=>x.id!==r.id);V.formDone=null;saveView();render();toast('방금 마감되어 신청이 접수되지 않았어요');}else if(j&&j.error)toast('신청 전달 실패: '+j.error);else if(j&&j.closed){g.form.open=false;render();}}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
+async function refreshFormStatus(g){ if(!canFetch()) return; try{const r=await fetch(S.seller.syncUrl+'?form='+encodeURIComponent(g.id)); const j=await r.json(); if(j&&j.group&&j.group.form){const wasOpen=formOpen(g); g.form.open=!!j.group.form.open; g.form.responses=j.group.form.responses||g.form.responses; if(wasOpen!==formOpen(g)) render();}}catch(e){} }
+setInterval(()=>{ if(formView){const g=S.groups.find(x=>x.id===formView); if(g&&formOpen(g)) refreshFormStatus(g);} },15000);
+let wasWaiting=null; setInterval(()=>{ const g=G(); if(!g) return; const w=formWaiting(g); if(wasWaiting===true&&w===false) render(); wasWaiting=w; },5000);
+function pushMember(m){ if(!canFetch()){save();return;} try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({member:m.id,name:m.name,phone:m.phone,zip:m.zip,addr:m.addr,addr2:m.addr2,memo:m.memo,delivery:m.delivery,cvs:m.cvs,cvsAddr:m.cvsAddr})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('전달 실패: '+j.error);else toast('배송지가 전달됐어요');}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
+(async()=>{
+  if(!canFetch()) return;
+  try{
+    if(formView){ const r=await fetch(S.seller.syncUrl+'?form='+encodeURIComponent(formView)); const j=await r.json();
+      if(j&&j.group){ S.groups=[Object.assign(blankGroup(''),j.group,{members:[]})]; S.groups[0].form=Object.assign(blankForm(),j.group.form); V.gid=j.group.id; render(); } return; }
+    if(personal){ const r=await fetch(S.seller.syncUrl+'?member='+encodeURIComponent(personal)); const j=await r.json();
+      if(j&&j.group){ S.seller=Object.assign(S.seller,j.seller||{}); S.notice=j.notice||S.notice; S.groups=[Object.assign(j.group,{members:[Object.assign(blankMember(),j.member)]})]; V.gid=j.group.id; V.mid=j.member.id; render(); } }
+    else if(V.adminKey){ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json();
+      if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{g.members=g.members.map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} render(); toast('구글 시트에서 불러왔어요'); } else if(j&&j.error){ toast('시트 불러오기 실패: '+j.error); } }
+  }catch(e){}
+})();
+fetchRates();
+window.addEventListener('hashchange',()=>{readHash();render();});
+render();
+</script>
+
+</body>
+</html>
