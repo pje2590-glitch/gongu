@@ -252,8 +252,11 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .steps button.done{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-bg)}
 .steps button.now{background:var(--ok-strong);color:#fff;border-color:var(--ok-strong)}
 .items{display:flex;flex-direction:column;gap:6px}
-.items .it{display:grid;grid-template-columns:1fr 52px 80px 88px 32px;gap:5px}
-@media (max-width:420px){.items .it{grid-template-columns:1fr 46px 70px 80px 30px}}
+.items .it{display:grid;grid-template-columns:1fr 48px 74px 82px 70px 28px;gap:4px}
+@media (max-width:420px){.items .it{grid-template-columns:1fr 40px 62px 72px 62px 26px}}
+.catgrp{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.catgrp summary{font-weight:700;font-size:15px;cursor:pointer}
+.catgrp .pcard{border-color:var(--line)}
 .items .it input{padding:5px 8px;font-size:14px}
 .x{border:0;background:var(--soft);border-radius:4px;color:var(--muted)}
 .muted{color:var(--muted)}
@@ -395,10 +398,12 @@ const blankCart=()=>({ovTotal:0,ovMode:'equal'});
 const blankGroup=(title)=>({id:uid(6),title,nick:'',closed:false,closedAt:'',date:new Date().toISOString().slice(0,10),currency:'JPY',rate:9.5,step:-1,courier:'CJ대한통운',stage2Open:false,photos:[],history:[],members:[],carts:[blankCart()],form:blankForm()});
 const DEFAULT_RULES='해외배송비를 나누기 위해 현지 배송비 무료 기준까지 모집합니다. 인원이 차면 임의로 마감합니다.\n현지 배송비가 발생하면 인원수대로 나눕니다.\n현지 매장 재고품 공구입니다. 공식 홈페이지에서 재고를 확인하신 뒤 신청해 주세요. 댓글에 링크나 사진도 함께 부탁드립니다.\n구매 실패로 인한 환불은 가능합니다.\n개체 차이로 인한 교환·환불은 불가합니다.\n중도 하차는 불가합니다.\n현재 배송대행지 물량 증가로 배송이 지연될 수 있습니다. 공구의 특성을 이해하시는 분만 참여 부탁드립니다.\n2차 정산 안내 후 3일간 연락이 없으면 물품을 임의로 처분합니다.';
 const DEFAULT_EXTRA='가벼운 물품 위주로 받을 예정이며, 해외배송비는 물품당으로 나눕니다. (예: 무거운 유리컵·그릇 등은 어렵습니다)';
-const DEFAULT_WELCOME='{닉네임}의 모집글에 어서 오세요\n\n어떤 이득을 보려고 여는 모집이 아니라, 제 물건을 사는 김에 해외배송비를 함께 나누려고 모읍니다 :) 그래서 최대한 정가 그대로 운영하고, 문의는 언제든 환영하며, 투명하게 운영하는 것을 목표로 합니다.\n\n{닉네임}도 직구를 좋아하는 사람 중 한 명이니 따뜻하게 대해 주세요. 아무 대가 없이, 그저 제 것을 사기 위해 시간과 정성을 들여 운영하고 있어요.\n\n항상 행복하세요 🍀';
+const DEFAULT_WELCOME='{닉네임}의 모집글에 어서 오세요\n\n제 물건을 사는 김에 해외배송비를 함께 나누려고 모읍니다 :)\n그래서 최대한 정가 그대로 운영하고, 문의는 언제든 환영하며, 투명하게 운영하는 것을 목표로 합니다.\n\n{닉네임}도 직구를 좋아하는 사람 중 한 명이니 따뜻하게 대해 주세요. 그저 제 것을 사기 위해 시간과 정성을 들여 운영하고 있어요.\n\n매장에 직접 가서 사 오는 상품에는 소정의 수고비가 붙습니다. 무거운 짐을 들고 오가는 하루의 입장료이자 커피 한 잔 정도로 생각해 주시면 감사하겠습니다 :) 이 점 괜찮으신 분만 참여 부탁드립니다.\n\n항상 행복하세요 🍀';
+const OLD_WELCOMES=['{닉네임}의 모집글에 어서 오세요\n\n어떤 이득을 보려고 여는 모집이 아니라, 제 물건을 사는 김에 해외배송비를 함께 나누려고 모읍니다 :) 그래서 최대한 정가 그대로 운영하고, 문의는 언제든 환영하며, 투명하게 운영하는 것을 목표로 합니다.\n\n{닉네임}도 직구를 좋아하는 사람 중 한 명이니 따뜻하게 대해 주세요. 아무 대가 없이, 그저 제 것을 사기 위해 시간과 정성을 들여 운영하고 있어요.\n\n항상 행복하세요 🍀'];
 const blankForm=()=>({open:false,openAt:'',deadline:'',intro:'',welcome:DEFAULT_WELCOME,store:'',itemsText:'',priceText:'',extra:DEFAULT_EXTRA,rules:DEFAULT_RULES,products:[],responses:[],marginKRW:10000,limitUSD:0});
-const blankProduct=()=>({id:uid(6),name:'',fx:0,price:0,photo:'',maxPer:1,minTarget:1,cap:0});
-const blankMember=()=>({id:uid(10),name:'',phone:'',zip:'',addr:'',addr2:'',memo:'',cvs:'',cvsAddr:'',cart:0,delivery:'normal',box:'',items:[{n:'',q:1,p:0,fx:0}],paid1:0,overseas:0,ovManual:false,paid2:0,tracking:'',packed:false,w:1});
+const DEFAULT_TIERS=[{t:'그외',v:2500},{t:'마코',v:3500},{t:'누이',v:4000}];
+const blankProduct=()=>({id:uid(6),name:'',fx:0,price:0,photo:'',maxPer:1,minTarget:1,cap:0,cat:'',bundle:'',fee:0,closed:false});
+const blankMember=()=>({id:uid(10),name:'',phone:'',zip:'',addr:'',addr2:'',memo:'',cvs:'',cvsAddr:'',cart:0,delivery:'normal',box:'',items:[{n:'',q:1,p:0,fx:0,fee:0}],paid1:0,overseas:0,ovManual:false,paid2:0,tracking:'',packed:false,w:1});
 const baseState=()=>({seller:{owner:'',bank:'카카오뱅크',acct:'3333-26-3323521',holder:'박정은',siteUrl:'',syncUrl:DEFAULT_SYNC,fontBody:'Gowun Dodum',fontTitle:'Gaegu'},notice:DEFAULT_NOTICE,groups:[]});
 function seed(){
   const d=days=>{const x=new Date();x.setDate(x.getDate()-days);return x.toISOString();};
@@ -429,7 +434,7 @@ const KEY='gongu-settle-v3';
 let S; try{S=JSON.parse(localStorage.getItem(KEY));}catch(e){S=null;}
 if(!S||!S.groups){ S=STANDALONE_BUILD?baseState():seed(); if(STANDALONE_BUILD) S.groups.push(blankGroup('첫 공구')); }
 S.seller=Object.assign(baseState().seller,S.seller||{}); if(!S.seller.syncUrl) S.seller.syncUrl=DEFAULT_SYNC; if(!S.notice||S.notice===OLD_NOTICE) S.notice=DEFAULT_NOTICE;
-S.groups.forEach(g=>{if(g.rate==null)g.rate=9.5;if(!g.carts||!g.carts.length)g.carts=[{ovTotal:g.ovTotal||0,ovMode:g.ovMode||'equal'}];g.members=g.members.map(m=>Object.assign(blankMember(),m));g.members.forEach(m=>{if(!(m.cart<g.carts.length))m.cart=0;});if(!g.form)g.form=blankForm();if(g.form.rules==null)g.form.rules=DEFAULT_RULES;if(g.form.welcome==null||g.form.welcome===DEFAULT_WELCOME.replace('어서 오세요\n','어서 오세요 🍀\n'))g.form.welcome=DEFAULT_WELCOME;if(g.form.openAt==null)g.form.openAt='';if(g.form.extra==null)g.form.extra=DEFAULT_EXTRA;if(g.form.store==null)g.form.store='';g.form.products=(g.form.products||[]).map(x=>Object.assign(blankProduct(),x));g.form.responses=g.form.responses||[];});
+S.groups.forEach(g=>{if(g.rate==null)g.rate=9.5;if(!g.carts||!g.carts.length)g.carts=[{ovTotal:g.ovTotal||0,ovMode:g.ovMode||'equal'}];g.members=g.members.map(m=>Object.assign(blankMember(),m));g.members.forEach(m=>{if(!(m.cart<g.carts.length))m.cart=0;});if(!g.form)g.form=blankForm();if(g.form.rules==null)g.form.rules=DEFAULT_RULES;if(g.form.welcome==null||OLD_WELCOMES.includes(g.form.welcome)||g.form.welcome===OLD_WELCOMES[0].replace('어서 오세요\n','어서 오세요 🍀\n'))g.form.welcome=DEFAULT_WELCOME;if(!g.form.feeTiers)g.form.feeTiers=DEFAULT_TIERS.slice();if(g.form.openAt==null)g.form.openAt='';if(g.form.extra==null)g.form.extra=DEFAULT_EXTRA;if(g.form.store==null)g.form.store='';g.form.products=(g.form.products||[]).map(x=>Object.assign(blankProduct(),x));g.form.responses=g.form.responses||[];});
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('저장 공간이 부족해요 (사진을 줄여 주세요)');} syncPush(); }
 
 let V={mode:'admin',gid:S.groups[0]?.id,mid:null,tabA:'status',tabM:'s1',adminKey:'',sub:{}};
@@ -445,7 +450,7 @@ readHash();
 
 /* 계산 */
 const won=n=>Math.round(n).toLocaleString('ko-KR')+'원';
-const s1=m=>m.items.reduce((a,i)=>a+i.q*i.p,0);
+const s1=m=>m.items.reduce((a,i)=>a+i.q*(i.p+(+i.fee||0)),0);
 const r1=m=>Math.max(0,s1(m)-(m.paid1||0));
 const dom=m=>DOMESTIC[m.delivery]||DOMESTIC.normal;
 const dcls=m=>m.delivery==='convenience'?'cvs':'visit';
@@ -474,9 +479,12 @@ function allocate(g){
   res.forEach(r=>{for(const [pid,q0] of Object.entries(r.picks||{})){const p=f.products.find(x=>x.id===pid); const q=+q0||0; if(!p||!q) continue;
     const cap=p.cap>0?p.cap:Infinity; const take=Math.max(0,Math.min(q,cap-got[pid])); all.push({rid:r.id,nick:r.nick,at:r.at,pid,name:p.name,price:p.price,q:take,wanted:q}); got[pid]+=take;}});
   const viable={}; f.products.forEach(p=>viable[p.id]=got[p.id]>0&&got[p.id]>=(p.minTarget||1));
+  /* 함께 사야 하는 묶음: 하나라도 최소 미달이면 묶음 전체 미확정 */
+  const bundles={}; f.products.forEach(p=>{if(p.bundle){(bundles[p.bundle]=bundles[p.bundle]||[]).push(p.id);}});
+  Object.values(bundles).forEach(ids=>{if(ids.some(id=>!viable[id])) ids.forEach(id=>viable[id]=false);});
   return {alloc:all.filter(a=>a.q>0&&viable[a.pid]),dropped:all.filter(a=>a.q<a.wanted||!viable[a.pid]),got,viable};
 }
-const formDone=g=>{const f=g.form; if(!f||!f.products.length) return false; const {got}=allocate(g); return f.products.every(p=>got[p.id]>=(p.minTarget||1));};
+const formDone=g=>{const f=g.form; if(!f||!f.products.length) return false; const {got}=allocate(g); return f.products.filter(p=>!p.closed).every(p=>got[p.id]>=(p.minTarget||1));};
 const formExpired=g=>!!(g.form&&g.form.deadline&&new Date(g.form.deadline+'T23:59:59')<new Date());
 const formWaiting=g=>!!(g.form&&g.form.open&&g.form.openAt)&&new Date(g.form.openAt)>new Date();
 const formOpen=g=>!!(g.form&&g.form.open)&&!formWaiting(g)&&!formExpired(g)&&!g.closed;
@@ -607,7 +615,7 @@ function renderMember(g){
         ${head('1차 정산서')}
         <div class="stage">
           <div class="hd"><b>1차 정산 · 현지 상품 금액</b>${p1?`<span class="pill ok">입금 확인</span>`:`<span class="pill no">${won(rem1)} 남음</span>`}</div>
-          ${m.items.map(i=>`<div class="line"><span>${esc(i.n)}<span class="q">${i.q}개${i.fx?' · '+esc(fxNote(g,i)):''}</span></span><span class="num">${(i.q*i.p).toLocaleString('ko-KR')}</span></div>`).join('')}
+          ${m.items.map(i=>`<div class="line"><span>${esc(i.n)}<span class="q">${i.q}개${i.fx?' · '+esc(fxNote(g,i)):''}${+i.fee?' · 수고비 '+(+i.fee).toLocaleString('ko-KR')+'원':''}</span></span><span class="num">${(i.q*(i.p+(+i.fee||0))).toLocaleString('ko-KR')}</span></div>`).join('')}
           <div class="line sub"><span>적용 환율</span><span class="num">${sym1(g)}1 = ${g.rate}원</span></div>
           <div class="line total"><span>1차 합계</span><span class="num">${won(s1(m))}</span></div>
           <div class="line sub"><span>받은 금액</span><span class="num">-${(m.paid1||0).toLocaleString('ko-KR')}원</span></div>
@@ -680,7 +688,7 @@ function formNotice(g){
       <div class="nl"><span class="ic">🏪</span><div><b>구매처</b><div>${f.store?esc(f.store):'<span class="muted">미정</span>'}</div></div></div>
       <div class="nl"><span class="ic">📌</span><div><b>공구 상품</b><div style="white-space:pre-line">${f.itemsText?esc(f.itemsText):(prods.length?prods.map(p=>esc(p.name)).join(', '):'<span class="muted">준비 중</span>')}</div></div></div>
       <div class="nl"><span class="ic">💰</span><div><b>가격</b><div style="white-space:pre-line">${f.priceText?esc(f.priceText):(prods.length?`<ul class="plain">${prods.map(p=>`<li>${esc(p.name)} · ${p.fx?fmtLocal(g,p.fx)+' ≈ ':''}${won(p.price||0)}${p.maxPer?` (1인 최대 ${p.maxPer}개)`:''}</li>`).join('')}</ul><div class="muted" style="font-size:12px">환율 ${sym1(g)}1 = ${g.rate}원 기준, 실제 정산 시 환율에 따라 달라질 수 있습니다.</div>`:'<span class="muted">준비 중</span>')}</div></div></div>
-      <div class="nl"><span class="ic">📦</span><div><b>해외·국내 배송비</b><div>해외배송비 1/n (물품당 계산) + 국내배송비 편의점택배 ${DOMESTIC.convenience.fee.toLocaleString('ko-KR')}원(GS25) / 일반택배 ${DOMESTIC.normal.fee.toLocaleString('ko-KR')}원</div></div></div>
+      <div class="nl"><span class="ic">📦</span><div><b>해외·국내 배송비</b><div>해외배송비 1/n (물품당 계산) + 국내배송비 편의점택배 ${DOMESTIC.convenience.fee.toLocaleString('ko-KR')}원(GS25) / 일반택배 ${DOMESTIC.normal.fee.toLocaleString('ko-KR')}원${prods.some(p=>p.fee>0)?`<br>매장 직접 구매 상품은 해외배송비 대신 수고비(${[...new Set(prods.filter(p=>p.fee>0).map(p=>p.fee))].sort((a,b)=>a-b).map(v=>v.toLocaleString('ko-KR')+'원').join(' / ')})가 붙습니다.`:''}</div></div></div>
       ${f.extra?`<div class="nl"><span class="ic">⚠️</span><div><b>기타 안내</b><div style="white-space:pre-line">${esc(f.extra)}</div></div></div>`:''}
       ${f.rules?`<ul class="rules">${f.rules.split('\n').map(x=>x.trim()).filter(Boolean).map(li).join('')}</ul>`:''}
     </div>
@@ -716,7 +724,7 @@ function renderForm(g){
       <h2>신청 내용 확인</h2>
       <p class="help" style="margin-bottom:8px">신청 후에는 주문 취소가 어렵습니다. 닉네임과 수량을 다시 한 번 확인해 주세요.</p>
       <dl class="kv"><dt>닉네임</dt><dd><b>${esc(rv.nick)}</b></dd>${Object.entries(rv.picks).map(([pid,q])=>{const p=f.products.find(x=>x.id===pid);return p?`<dt>상품</dt><dd>${esc(p.name)} <b>× ${q}</b>${p.price?` · ${won(p.price*q)}`:''}</dd>`:'';}).join('')}</dl>
-      ${(()=>{const qty=Object.values(rv.picks).reduce((a,b)=>a+(+b||0),0);const items=Object.entries(rv.picks).reduce((a,[pid,q])=>{const p=f.products.find(x=>x.id===pid);return a+((p&&p.price||0)*q);},0);return `<div class="est card" style="margin-top:10px;padding:10px 12px"><div class="line"><span>현지 물품비</span><span class="num">${won(items)}</span></div><div class="line"><span>해외 배송비 <span class="q">품목당 3,000원 × ${qty}개</span></span><span class="num">약 ${won(qty*3000)}</span></div><div class="line"><span>국내 배송비 <span class="q">일반택배 기준</span></span><span class="num">약 ${won(DOMESTIC.normal.fee)}</span></div><div class="line total"><span>예상 합계</span><span class="num">약 ${won(items+qty*3000+DOMESTIC.normal.fee)}</span></div></div><p class="help" style="margin-top:6px">⚠️ <b style="color:var(--bad)">예상치이며 정산 금액은 달라질 수 있습니다.</b></p><p class="help" style="margin-top:4px">🏝️ 도서·산간 지역은 배송비가 추가 청구됩니다.</p>`;})()}
+      ${(()=>{let ovq=0,items=0,fee=0;Object.entries(rv.picks).forEach(([pid,q])=>{const p=f.products.find(x=>x.id===pid);if(!p)return;items+=(p.price||0)*q;if(p.fee>0)fee+=p.fee*q;else ovq+=q;});return `<div class="est card" style="margin-top:10px;padding:10px 12px"><div class="line"><span>현지 물품비</span><span class="num">${won(items)}</span></div><div class="line"><span>해외 배송비 <span class="q">직구 품목당 3,000원 × ${ovq}개</span></span><span class="num">약 ${won(ovq*3000)}</span></div>${fee?`<div class="line"><span>수고비</span><span class="num">${won(fee)}</span></div>`:''}<div class="line"><span>국내 배송비 <span class="q">일반택배 기준</span></span><span class="num">약 ${won(DOMESTIC.normal.fee)}</span></div><div class="line total"><span>예상 합계</span><span class="num">약 ${won(items+ovq*3000+fee+DOMESTIC.normal.fee)}</span></div></div><p class="help" style="margin-top:6px">⚠️ <b style="color:var(--bad)">예상치이며 정산 금액은 달라질 수 있습니다.</b></p><p class="help" style="margin-top:4px">🏝️ 도서·산간 지역은 배송비가 추가 청구됩니다.</p>`;})()}
       <div class="row between" style="margin-top:12px"><button class="btn" id="reviewBack">← 수정하기</button><button class="btn p" id="reviewOk">확인했어요, 이대로 신청</button></div>
     </div>`;
   return head+`
@@ -724,19 +732,24 @@ function renderForm(g){
       <div class="card">
         <div class="row between"><label class="f" style="flex:1">닉네임 (카페에서 쓰는 이름)<input id="r_nick" placeholder="닉네임" required maxlength="20" value="${rv?esc(rv.nick):''}"></label></div>
       </div>
-      ${f.products.map(p=>{const left=p.cap>0?Math.max(0,p.cap-got[p.id]):null;return `
-      <div class="card" style="display:grid;grid-template-columns:${p.photo?'96px 1fr':'1fr'};gap:12px;align-items:start">
-        ${p.photo?`<img src="${p.photo}" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:10px;border:1px solid var(--line)">`:''}
+      ${(()=>{const vis=f.products.filter(p=>!p.closed&&!(p.cap>0&&p.cap-got[p.id]<=0));if(!vis.length)return '<div class="card"><p class="help">지금 신청할 수 있는 상품이 없어요.</p></div>';
+        const cats=[];vis.forEach(p=>{const c=p.cat||'';if(!cats.includes(c))cats.push(c);});
+        const card=p=>{const left=p.cap>0?Math.max(0,p.cap-got[p.id]):null;return `
+      <div class="card pcard" style="display:grid;grid-template-columns:${p.photo?'84px 1fr':'1fr'};gap:10px;align-items:start">
+        ${p.photo?`<img src="${p.photo}" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`:''}
         <div>
-          <div style="font-weight:700;font-size:15px">${esc(p.name)}</div>
-          <div class="muted" style="font-size:13px">${p.price?won(p.price)+' · ':''}1인 최대 ${p.maxPer}개${left!==null?` · 남은 수량 ${left}개`:''}</div>
-          <label class="f" style="margin-top:8px;max-width:160px">수량<select data-pick="${p.id}" ${left===0?'disabled':''}>${Array.from({length:(left===null?p.maxPer:Math.min(p.maxPer,left))+1},(_,i)=>`<option value="${i}" ${rv&&rv.picks[p.id]===i?'selected':''}>${i}개</option>`).join('')}</select></label>
+          <div style="font-weight:700;font-size:15px">${esc(p.name)}${p.bundle?` <span class="pill" title="함께 사야 하는 묶음">묶음 ${esc(p.bundle)}</span>`:''}</div>
+          <div class="muted" style="font-size:13px">${p.price?won(p.price)+' · ':''}${p.fee>0?`수고비 ${p.fee.toLocaleString('ko-KR')}원 · `:''}1인 최대 ${p.maxPer}개${left!==null?` · 남은 수량 ${left}개`:''}</div>
+          <label class="f" style="margin-top:6px;max-width:150px">수량<select data-pick="${p.id}">${Array.from({length:(left===null?p.maxPer:Math.min(p.maxPer,left))+1},(_,i)=>`<option value="${i}" ${rv&&rv.picks[p.id]===i?'selected':''}>${i}개</option>`).join('')}</select></label>
         </div>
-      </div>`;}).join('')}
+      </div>`;};
+        if(cats.length<=1) return vis.map(card).join('');
+        return cats.map((c,ci)=>{const list=vis.filter(p=>(p.cat||'')===c);const picked=rv?list.filter(p=>rv.picks[p.id]).length:0;return `<details class="catgrp" ${ci===0||picked?'open':''}><summary>${esc(c||'기타')} <span class="muted">(${list.length}개${picked?` · ${picked}개 선택`:''})</span></summary><div class="panel" style="margin-top:8px">${list.map(card).join('')}</div></details>`;}).join('');})()}
       <div class="card est" id="estBox" hidden>
         <div class="row between"><b>예상 금액</b><span class="pill">추후 변동 가능</span></div>
         <div class="line"><span>현지 물품비 <span class="q" id="estItemsQ"></span></span><span class="num" id="estItems">0원</span></div>
-        <div class="line"><span>해외 배송비 <span class="q">품목당 3,000원 × <span id="estQty">0</span>개</span></span><span class="num" id="estOversea">약 0원</span></div>
+        <div class="line"><span>해외 배송비 <span class="q">직구 품목당 3,000원 × <span id="estQty">0</span>개</span></span><span class="num" id="estOversea">약 0원</span></div>
+        <div class="line" id="estFeeLine" hidden><span>수고비 <span class="q">매장 직접 구매 상품</span></span><span class="num" id="estFee">0원</span></div>
         <div class="line"><span>국내 배송비 <span class="q">일반택배 기준</span></span><span class="num">약 ${DOMESTIC.normal.fee.toLocaleString('ko-KR')}원</span></div>
         <div class="line total"><span>예상 합계</span><span class="num" id="estTotal">약 0원</span></div>
         <p class="help" style="margin-top:8px">⚠️ <b style="color:var(--bad)">위 금액은 예상치입니다.</b> 환율, 실제 해외 배송비, 선택하신 국내 배송 방법에 따라 <b style="color:var(--bad)">정산 금액은 달라질 수 있어요.</b></p><p class="help" style="margin-top:6px">🏝️ 도서·산간 지역은 배송비가 추가 청구됩니다.</p>
@@ -805,7 +818,16 @@ ${subtabs('form',[{id:'setup',t:'폼·상품'},{id:'calc',t:'장바구니 계산
       <div class="row end" style="margin-top:8px"><button class="btn p s" id="formSave">저장</button></div>
     </div>
     <div class="card">
-      <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">상품 ${f.products.length}개</h2><button class="btn s p" id="prodAdd">+ 상품</button></div>
+      <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">상품 ${f.products.length}개${f.products.some(p=>p.closed)?` <span class="muted" style="font-size:13px">(확정 ${f.products.filter(p=>p.closed).length})</span>`:''}</h2><span class="row"><button class="btn s" id="bulkOpen">📋 목록으로 한 번에</button><button class="btn s p" id="prodAdd">+ 상품</button></span></div>
+      <datalist id="catlist">${[...new Set(f.products.map(p=>p.cat).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+      <datalist id="bundlelist">${[...new Set(f.products.map(p=>p.bundle).filter(Boolean))].map(c=>`<option value="${esc(c)}">`).join('')}</datalist>
+      <div class="grp" id="bulkBox" ${V.bulkOpen===g.id?'':'hidden'}><div class="grp-h">상품 목록 한 번에 넣기</div>
+        <p class="help">상품 목록 글을 붙여 넣거나(한 줄에 하나: 이름 가격 1인N개), 목록 캡처 사진을 올리면 이름·현지가·1인 최대를 읽어 아래 표로 만듭니다. 가격 없는 짧은 줄은 분류 제목으로 봅니다. 표를 고친 뒤 "모두 추가"를 누르세요.</p>
+        <textarea id="bulkText" rows="5" placeholder="마스코트&#10;우사기 마스코트 1,650 1인 2개&#10;하치와레 마스코트 1,650 1인 2개&#10;누이&#10;치이카와 누이 2,200 1인 1개"></textarea>
+        <div class="row" style="margin-top:6px"><button class="btn s p" id="bulkParse">글에서 읽기</button><label class="btn s" style="cursor:pointer">📷 캡처 사진으로 읽기<input type="file" id="bulkImg" accept="image/*" multiple hidden></label><span class="help">사진 읽기는 사이트에 올린 뒤 구글 OCR로 동작합니다.</span></div>
+        <div id="bulkOut" style="margin-top:8px"></div>
+      </div>
+      <label class="f" style="margin-top:8px">수고비 버튼 (이름 금액, 쉼표로 구분)<input id="feeTiers" value="${esc((f.feeTiers||DEFAULT_TIERS).map(t=>t.t+' '+t.v).join(', '))}" placeholder="그외 2500, 마코 3500, 누이 4000"></label>
       <div class="plist" style="margin-top:8px">
         ${f.products.map(p=>`
         <div class="prow" data-p="${p.id}" style="grid-template-columns:${p.photo?'64px 1fr':'1fr'}">
@@ -813,8 +835,11 @@ ${subtabs('form',[{id:'setup',t:'폼·상품'},{id:'calc',t:'장바구니 계산
           <div>
             <div class="grid3"><label class="f">상품명<input data-pf="name" data-pid="${p.id}" value="${esc(p.name)}"></label><label class="f">현지가 (${sym1(g)})<input data-pf="fx" data-pid="${p.id}" inputmode="decimal" value="${p.fx||''}"></label><label class="f">원화 (${p.fx?'자동':'직접'})<input data-pf="price" data-pid="${p.id}" inputmode="numeric" value="${p.price||''}" ${p.fx?'readonly style="background:var(--soft)"':''}></label></div>
             <div class="grid3" style="margin-top:6px"><label class="f">1인 최대<input data-pf="maxPer" data-pid="${p.id}" inputmode="numeric" value="${p.maxPer}"></label><label class="f">최소 목표<input data-pf="minTarget" data-pid="${p.id}" inputmode="numeric" value="${p.minTarget}"></label><label class="f">매장 최대 (0=제한 없음)<input data-pf="cap" data-pid="${p.id}" inputmode="numeric" value="${p.cap||0}"></label></div>
+            <div class="grid2" style="margin-top:6px"><label class="f">분류 (폼에서 묶어 보이기)<input data-pf="cat" data-pid="${p.id}" value="${esc(p.cat||'')}" placeholder="예) 마스코트" list="catlist"></label><label class="f">함께 사야 하는 묶음 (박스 단위)<input data-pf="bundle" data-pid="${p.id}" value="${esc(p.bundle||'')}" placeholder="예) 박스A" list="bundlelist"></label></div>
+            <div class="row" style="margin-top:6px"><span class="help">수고비</span><button class="btn s ${!p.fee?'p':''}" data-fee="${p.id}:0">없음 (직구)</button>${(f.feeTiers||DEFAULT_TIERS).map(t=>`<button class="btn s ${p.fee===t.v?'p':''}" data-fee="${p.id}:${t.v}">${esc(t.t)} ${t.v.toLocaleString('ko-KR')}</button>`).join('')}<input data-pf="fee" data-pid="${p.id}" inputmode="numeric" value="${p.fee||''}" placeholder="직접" style="width:80px;padding:5px 8px"></div>
             <div class="row" style="margin-top:6px">
-              <span class="pill ${viable[p.id]?'ok':got[p.id]?'':'no'}">신청 ${got[p.id]}개 / 최소 ${p.minTarget}${p.cap?' / 최대 '+p.cap:''}</span>
+              <span class="pill ${viable[p.id]?'ok':got[p.id]?'':'no'}">신청 ${got[p.id]}개 / 최소 ${p.minTarget}${p.cap?' / 최대 '+p.cap:''}${p.bundle&&!viable[p.id]&&got[p.id]>=(p.minTarget||1)?' · 묶음 미달':''}</span>
+              <label class="sw"><input type="checkbox" data-pclosed="${p.id}" ${p.closed?'checked':''}> 확정 (폼에서 숨김)</label>
               <label class="btn s" style="cursor:pointer">📷 사진<input type="file" accept="image/*" data-pphoto="${p.id}" hidden></label>
               <button class="btn s danger" data-pdel="${p.id}">삭제</button>
             </div>
@@ -1111,11 +1136,11 @@ function bind(){
   });
   const rf=document.getElementById('recruitForm'); if(rf) rf.onsubmit=e=>{e.preventDefault();const nick=v('r_nick');if(!nick)return toast('닉네임을 입력해 주세요');const picks={};let any=false;rf.querySelectorAll('[data-pick]').forEach(sel=>{const q=+sel.value||0;if(q){picks[sel.dataset.pick]=q;any=true;}});if(!any)return toast('수량을 하나 이상 골라 주세요 (모두 0개예요)');
     V.formReview={gid:g.id,nick,picks}; V.formStep=V.formStep||{}; V.formStep[g.id]='review'; saveView(); render();};
-  if(rf){ const upd=()=>{let qty=0,items=0;const parts=[];rf.querySelectorAll('[data-pick]').forEach(sel=>{const q=+sel.value||0;const p=g.form.products.find(x=>x.id===sel.dataset.pick);if(q&&p){qty+=q;items+=(p.price||0)*q;parts.push(esc(p.name)+' ×'+q);}});
+  if(rf){ const upd=()=>{let qty=0,ovq=0,items=0,fee=0;const parts=[];rf.querySelectorAll('[data-pick]').forEach(sel=>{const q=+sel.value||0;const p=g.form.products.find(x=>x.id===sel.dataset.pick);if(q&&p){qty+=q;items+=(p.price||0)*q;if(p.fee>0)fee+=p.fee*q;else ovq+=q;parts.push(esc(p.name)+' ×'+q);}});
       const box=document.getElementById('estBox'),ok=document.getElementById('estOk'),nx=document.getElementById('pickNext');
       if(!qty){box.hidden=true;ok.checked=false;nx.disabled=true;return;}
-      box.hidden=false;const ov=qty*3000,tot=items+ov+DOMESTIC.normal.fee;
-      document.getElementById('estItems').textContent=won(items);document.getElementById('estItemsQ').textContent=parts.join(', ');document.getElementById('estQty').textContent=qty;document.getElementById('estOversea').textContent='약 '+won(ov);document.getElementById('estTotal').textContent='약 '+won(tot);nx.disabled=!ok.checked;};
+      box.hidden=false;const ov=ovq*3000,tot=items+ov+fee+DOMESTIC.normal.fee;
+      document.getElementById('estItems').textContent=won(items);document.getElementById('estItemsQ').textContent=parts.join(', ');document.getElementById('estQty').textContent=ovq;document.getElementById('estOversea').textContent='약 '+won(ov);document.getElementById('estFeeLine').hidden=!fee;document.getElementById('estFee').textContent=won(fee);document.getElementById('estTotal').textContent='약 '+won(tot);nx.disabled=!ok.checked;};
     rf.querySelectorAll('[data-pick]').forEach(sel=>sel.onchange=()=>{document.getElementById('estOk').checked=false;upd();});const eo=document.getElementById('estOk'); if(eo) eo.onchange=upd; upd(); }
   const rb=document.getElementById('reviewBack'); if(rb) rb.onclick=()=>{V.formStep[g.id]='pick';saveView();render();};
   const ro=document.getElementById('reviewOk'); if(ro) ro.onclick=()=>{const rv=V.formReview; if(!rv||rv.gid!==g.id) return; const r={id:uid(8),nick:rv.nick,at:now(),picks:rv.picks}; g.form.responses.push(r); if(formDone(g)){g.form.open=false;} V.formDone=g.id; V.formReview=null; V.formStep[g.id]='welcome'; saveView(); if(formView&&canFetch()){pushResponse(g,r);}else{save();} render(); toast('신청했어요');};
@@ -1134,7 +1159,17 @@ function bind(){
   const ftm2=document.getElementById('formToMembers2'); if(ftm2) ftm2.onclick=()=>importFromForm(g);
   const fsv=document.getElementById('formSave'); if(fsv) fsv.onclick=()=>{g.form.deadline=v('formDeadline');g.form.openAt=v('formOpenAt');g.form.welcome=v('formWelcome');g.form.intro=v('formIntro');g.form.store=v('formStore');g.form.itemsText=v('formItems');g.form.priceText=v('formPrice');g.form.extra=v('formExtra');g.form.rules=v('formRules');save();render();toast('저장했어요');};
   const pa=document.getElementById('prodAdd'); if(pa) pa.onclick=()=>{g.form.products.push(blankProduct());save();render();};
-  app.querySelectorAll('[data-pf]').forEach(i=>i.onchange=()=>{const p=g.form.products.find(x=>x.id===i.dataset.pid);if(!p)return;const f=i.dataset.pf;p[f]=f==='name'?i.value.trim():(+String(i.value).replace(/[^\d.]/g,'')||0);if(f==='maxPer'&&p.maxPer<1)p.maxPer=1;if(f==='minTarget'&&p.minTarget<1)p.minTarget=1;if(p.fx)p.price=Math.round(p.fx*g.rate);save();render();});
+  app.querySelectorAll('[data-fee]').forEach(b=>b.onclick=()=>{const [pid,v]=b.dataset.fee.split(':');const p=g.form.products.find(x=>x.id===pid);if(p){p.fee=+v||0;save();render();}});
+  app.querySelectorAll('[data-pclosed]').forEach(i=>i.onchange=()=>{const p=g.form.products.find(x=>x.id===i.dataset.pclosed);if(p){p.closed=i.checked;save();render();}});
+  const ft=document.getElementById('feeTiers'); if(ft) ft.onchange=()=>{g.form.feeTiers=ft.value.split(',').map(x=>x.trim()).filter(Boolean).map(x=>{const m=x.match(/^(.*?)\s*([\d,]+)\s*원?$/);return m?{t:m[1].trim()||'수고비',v:+m[2].replace(/,/g,'')}:null;}).filter(Boolean);save();render();};
+  const bo=document.getElementById('bulkOpen'); if(bo) bo.onclick=()=>{V.bulkOpen=V.bulkOpen===g.id?null:g.id;saveView();render();};
+  const bp=document.getElementById('bulkParse'); if(bp) bp.onclick=()=>showBulk(g,parseProductText(v('bulkText')));
+  const bi=document.getElementById('bulkImg'); if(bi) bi.onchange=async()=>{ if(!canFetch()){toast('사진 글자 읽기는 사이트에 올린 뒤 구글 OCR로 동작합니다. 지금은 글로 붙여 넣어 주세요');return;} if(!V.adminKey){toast('설정 → 연동에 관리자 비밀번호를 먼저 넣어 주세요');return;} toast('사진 읽는 중…'); let all='';
+    for(const f of Array.from(bi.files)){ try{ const data=await shrink(f,1600,.9); const r=await fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,ocr:data})}); const j=await r.json(); if(j&&j.text) all+=(all?'\n':'')+j.text; else toast('읽기 실패: '+(j&&j.error||'')); }catch(e){toast('읽기 실패');} }
+    const ta=document.getElementById('bulkText'); ta.value=(ta.value?ta.value+'\n':'')+all; showBulk(g,parseProductText(ta.value)); };
+  app.querySelectorAll('[data-bulkadd]').forEach(b=>b.onclick=()=>{const rows=[...document.querySelectorAll('#bulkOut tbody tr')].map(tr=>({name:tr.querySelector('[data-bk=name]').value.trim(),fx:+tr.querySelector('[data-bk=fx]').value||0,maxPer:+tr.querySelector('[data-bk=maxPer]').value||1,cat:tr.querySelector('[data-bk=cat]').value.trim()})).filter(r=>r.name);
+    rows.forEach(r=>{const p=blankProduct();p.name=r.name;p.fx=r.fx;p.price=r.fx?Math.round(r.fx*g.rate):0;p.maxPer=r.maxPer;p.cat=r.cat;g.form.products.push(p);});V.bulkOpen=null;saveView();save();render();toast(rows.length+'개 상품을 추가했어요');});
+  app.querySelectorAll('[data-pf]').forEach(i=>i.onchange=()=>{const p=g.form.products.find(x=>x.id===i.dataset.pid);if(!p)return;const f=i.dataset.pf;p[f]=(f==='name'||f==='cat'||f==='bundle')?i.value.trim():(+String(i.value).replace(/[^\d.]/g,'')||0);if(f==='maxPer'&&p.maxPer<1)p.maxPer=1;if(f==='minTarget'&&p.minTarget<1)p.minTarget=1;if(p.fx)p.price=Math.round(p.fx*g.rate);save();render();});
   app.querySelectorAll('[data-pdel]').forEach(b=>b.onclick=()=>{g.form.products=g.form.products.filter(x=>x.id!==b.dataset.pdel);save();render();});
   app.querySelectorAll('[data-pphoto]').forEach(i=>i.onchange=async()=>{const p=g.form.products.find(x=>x.id===i.dataset.pphoto);const f=i.files[0];if(!p||!f)return;try{p.photo=await shrink(f,600,.8);save();render();}catch(e){toast('사진 처리 실패');}});
   app.querySelectorAll('[data-rdel]').forEach(b=>b.onclick=()=>{g.form.responses=g.form.responses.filter(x=>x.id!==b.dataset.rdel);save();render();});
@@ -1209,8 +1244,28 @@ function bind(){
   const dg=document.getElementById('delG'); if(dg) dg.onclick=e=>{if(e.target.dataset.armed){S.groups=S.groups.filter(x=>x!==g);V.gid=S.groups[0]?.id;save();render();}else{e.target.dataset.armed='1';e.target.textContent='정말 삭제? (다시 누르기)';}};
   const ra=document.getElementById('resetAll'); if(ra) ra.onclick=e=>{if(e.target.dataset.armed){S=seed();V.gid=S.groups[0].id;V.mid=null;save();saveView();render();}else{e.target.dataset.armed='1';e.target.textContent='정말 초기화? (다시 누르기)';}};
 }
+function parseProductText(txt){
+  const lines=String(txt||'').split(/\r?\n/).map(x=>x.replace(/[|·•\t]+/g,' ').trim()).filter(Boolean); const out=[]; let cat='';
+  for(const ln of lines){
+    const limitM=ln.match(/(?:1인|한\s*사람|한\s*분|お一人様?|各|1名)\s*(?:당|)?\s*(\d+)\s*(?:개|点|つ|個)?|(\d+)\s*(?:개|点|個)\s*(?:제한|限定|까지|まで)/);
+    let rest=limitM?ln.replace(limitM[0],' '):ln;
+    const priceM=rest.match(/(?:¥|￥|円|엔|\$|€)?\s*(\d{1,3}(?:,\d{3})+|\d{3,7})\s*(?:円|엔|원|JPY|yen)?/i);
+    if(!priceM){ if(ln.length<=20) cat=ln.replace(/[\[\]【】<>#*]/g,'').trim(); continue; }
+    const name=rest.replace(priceM[0],' ').replace(/[¥￥円엔원:：\-–—()（）]/g,' ').replace(/\b(JPY|yen)\b/ig,' ').replace(/\s+/g,' ').trim();
+    if(!name) continue;
+    out.push({name,fx:+priceM[1].replace(/,/g,''),maxPer:limitM?+(limitM[1]||limitM[2])||1:1,cat});
+  }
+  return out;
+}
+function showBulk(g,rows){
+  const out=document.getElementById('bulkOut'); if(!out) return;
+  if(!rows.length){out.innerHTML='<p class="help" style="color:var(--bad)">읽어낸 상품이 없어요. 한 줄에 "이름 가격" 형태인지 확인해 주세요.</p>';return;}
+  out.innerHTML=`<div class="scroll"><table class="tbl"><thead><tr><th>상품명</th><th>현지가 (${sym1(g)})</th><th>1인 최대</th><th>분류</th></tr></thead><tbody>${rows.map(r=>`<tr><td class="w"><input data-bk="name" value="${esc(r.name)}" style="padding:4px 6px;font-size:13px;min-width:140px"></td><td><input data-bk="fx" inputmode="decimal" value="${r.fx||''}" style="width:80px;padding:4px 6px;font-size:13px"></td><td><input data-bk="maxPer" inputmode="numeric" value="${r.maxPer}" style="width:56px;padding:4px 6px;font-size:13px"></td><td><input data-bk="cat" value="${esc(r.cat)}" style="width:90px;padding:4px 6px;font-size:13px"></td></tr>`).join('')}</tbody></table></div><div class="row end" style="margin-top:8px"><button class="btn p s" data-bulkadd="1">모두 추가 (${rows.length}개)</button></div>`;
+  out.querySelector('[data-bulkadd]').onclick=()=>{const list=[...out.querySelectorAll('tbody tr')].map(tr=>({name:tr.querySelector('[data-bk=name]').value.trim(),fx:+tr.querySelector('[data-bk=fx]').value||0,maxPer:+tr.querySelector('[data-bk=maxPer]').value||1,cat:tr.querySelector('[data-bk=cat]').value.trim()})).filter(r=>r.name);
+    list.forEach(r=>{const p=blankProduct();p.name=r.name;p.fx=r.fx;p.price=r.fx?Math.round(r.fx*g.rate):0;p.maxPer=r.maxPer;p.cat=r.cat;g.form.products.push(p);});V.bulkOpen=null;saveView();save();render();toast(list.length+'개 상품을 추가했어요');};
+}
 function importFromForm(g){const {alloc}=allocate(g);if(!alloc.length)return toast('배정된 신청이 없어요');const byNick={};alloc.forEach(a=>{(byNick[a.nick]=byNick[a.nick]||[]).push(a);});let added=0;
-  Object.entries(byNick).forEach(([nick,list])=>{let m=g.members.find(x=>x.name===nick);if(!m){m=blankMember();m.name=nick;g.members.push(m);added++;}m.items=list.map(a=>{const p=g.form.products.find(x=>x.id===a.pid);return {n:a.name,q:a.q,p:p&&p.fx?Math.round(p.fx*g.rate):(a.price||0),fx:p&&p.fx?p.fx:0};});});
+  Object.entries(byNick).forEach(([nick,list])=>{let m=g.members.find(x=>x.name===nick);if(!m){m=blankMember();m.name=nick;g.members.push(m);added++;}m.items=list.map(a=>{const p=g.form.products.find(x=>x.id===a.pid);return {n:a.name,q:a.q,p:p&&p.fx?Math.round(p.fx*g.rate):(a.price||0),fx:p&&p.fx?p.fx:0,fee:p&&p.fee>0?p.fee:0};});});
   distribute(g);save();V.tabA='members';saveView();render();toast(`참여자 ${added}명 추가, ${Object.keys(byNick).length}명 구매 내역 반영`);}
 function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
 function addGroup(){const g=blankGroup('새 공구 '+(S.groups.length+1));S.groups.push(g);V.gid=g.id;V.mid=null;V.mode='admin';V.tabA='settings';save();saveView();render();toast('새 공구를 만들었어요. 이름과 닉네임을 정해 주세요');}
@@ -1234,17 +1289,17 @@ function editMember(g,m,isNew){
     <div class="grid2" style="margin-top:8px"><label class="f">상세주소<input id="e_addr2" value="${esc(m.addr2)}"></label><label class="f">장바구니<select id="e_cart">${g.carts.map((c,ci)=>`<option value="${ci}" ${(m.cart||0)===ci?'selected':''}>${ci+1}번 장바구니</option>`).join('')}</select></label><label class="f">로지아이 박스타입<select id="e_box"><option value="">자동 (${dom(m).box})</option>${'XSABCDEF'.split('').map(b=>`<option ${m.box===b?'selected':''}>${b}</option>`).join('')}</select></label></div>
     <label class="f" style="margin-top:8px">요청사항<input id="e_memo" value="${esc(m.memo)}" maxlength="30"></label>
     <div class="grid2" style="margin-top:8px"><label class="f">편의점택배일 때 · 도착 편의점명 (GS25)<input id="e_cvs" value="${esc(m.cvs)}" placeholder="GS25 목동중앙점"></label><label class="f">도착 편의점 주소<input id="e_cvsAddr" value="${esc(m.cvsAddr)}"></label></div>
-    <p class="help" style="margin:10px 0 4px">구매 내역: 상품명 · 수량 · 현지가(${sym1(g)}) · 개당 원화. 현지가를 넣으면 원화는 <b>현지가 × ${g.rate}</b>로 자동 계산되고 정산서에 계산식이 보입니다.</p>
-    <div class="items">${m.items.map((i,k)=>`<div class="it"><input data-k="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-k="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-k="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-k="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><button class="x" data-rm="${k}">×</button></div>`).join('')}</div>
+    <p class="help" style="margin:10px 0 4px">구매 내역: 상품명 · 수량 · 현지가(${sym1(g)}) · 개당 원화 · 수고비(매장 직접 구매 시). 현지가를 넣으면 원화는 <b>현지가 × ${g.rate}</b>로 자동 계산되고 정산서에 계산식이 보입니다.</p>
+    <div class="items">${m.items.map((i,k)=>`<div class="it"><input data-k="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-k="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-k="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-k="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-k="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-rm="${k}">×</button></div>`).join('')}</div>
     <div class="row" style="margin-top:8px"><button class="btn s" id="e_add">+ 상품 추가</button><span class="muted" style="font-size:13px">1차 합계 <b class="num">${won(s1(m))}</b></span></div>
     <div class="row end" style="margin-top:10px"><button class="btn s" id="e_cancel">닫기</button><button class="btn p" id="e_save">저장</button></div>`;
     const pull=()=>{m.name=box.querySelector('#e_name').value.trim();m.phone=box.querySelector('#e_phone').value.trim();m.zip=box.querySelector('#e_zip').value.trim();m.delivery=box.querySelector('#e_dlv').value;m.addr=box.querySelector('#e_addr').value.trim();m.addr2=box.querySelector('#e_addr2').value.trim();m.box=box.querySelector('#e_box').value;m.cart=+box.querySelector('#e_cart').value||0;m.memo=box.querySelector('#e_memo').value.trim();m.cvs=box.querySelector('#e_cvs').value.trim();m.cvsAddr=box.querySelector('#e_cvsAddr').value.trim();
       box.querySelectorAll('.it input').forEach(i=>{const it=m.items[+i.dataset.k];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.items.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});};
     box.querySelectorAll('.it input').forEach(i=>i.onchange=()=>{pull();draw();});
     box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{pull();m.items.splice(+b.dataset.rm,1);draw();});
-    box.querySelector('#e_add').onclick=()=>{pull();m.items.push({n:'',q:1,p:0,fx:0});draw();};
+    box.querySelector('#e_add').onclick=()=>{pull();m.items.push({n:'',q:1,p:0,fx:0,fee:0});draw();};
     box.querySelector('#e_cancel').onclick=()=>{if(isNew&&!m.name){g.members=g.members.filter(x=>x!==m);save();}render();};
-    box.querySelector('#e_save').onclick=()=>{pull();if(!m.name){toast('이름을 입력해 주세요');return;}m.items=m.items.filter(i=>i.n);if(!m.items.length)m.items=[{n:'(상품 미정)',q:1,p:0,fx:0}];distribute(g);save();render();toast('저장했어요');};
+    box.querySelector('#e_save').onclick=()=>{pull();if(!m.name){toast('이름을 입력해 주세요');return;}m.items=m.items.filter(i=>i.n);if(!m.items.length)m.items=[{n:'(상품 미정)',q:1,p:0,fx:0,fee:0}];distribute(g);save();render();toast('저장했어요');};
   };
   draw();row.after(box);box.querySelector('#e_name').focus();
 }
