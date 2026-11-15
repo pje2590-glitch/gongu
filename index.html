@@ -20,22 +20,26 @@
   --bad:#C9413E; --bad-bg:#FBEAEA;
   --navy:#1C2531; --navy-ink:#FFFFFF;
   --cvs-bg:#FFF4CC; --cvs:#8A6300; --visit-bg:#E2EEFA; --visit:#2F5F9E;
+  --mem-bg:#EFEAF7; --mem-line:#D6CBE8; --mem-ink:#6A4C93;
+  --tr-bg:#FFF4CF; --tr-line:#F1D27A; --tr-ink:#8A5A00; --fm-bg:#E3EFFB; --fm-line:#AFCBEA; --fm-ink:#2F5F9E;
   --body:"Gowun Dodum",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
   --title:"Gaegu","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
   --bg:#151D1D; --card:#1F2929; --ink:#ECF2F1; --muted:#95A2A2; --line:#2E3B3B; --soft:#283232;
-  --ok:#9ADB70; --ok-bg:#243A18; --ok-strong:#7CCB4A; --bad:#F09490; --bad-bg:#3D2424; --navy:#0E151C; --navy-ink:#F4F7FA; --cvs-bg:#3D3415; --cvs:#F2D479; --visit-bg:#1E2F44; --visit:#9CC4F0; color-scheme:dark } }
+  --ok:#9ADB70; --ok-bg:#243A18; --ok-strong:#7CCB4A; --bad:#F09490; --bad-bg:#3D2424; --navy:#0E151C; --navy-ink:#F4F7FA; --cvs-bg:#3D3415; --cvs:#F2D479; --visit-bg:#1E2F44; --visit:#9CC4F0; --mem-bg:#221E2B; --mem-line:#3A3248; --mem-ink:#C9B3EA; --tr-bg:#3A3214; --tr-line:#6B5A22; --tr-ink:#F2D479; --fm-bg:#1E2F44; --fm-line:#36506F; --fm-ink:#9CC4F0; color-scheme:dark } }
 :root[data-theme="dark"]{
   --bg:#151D1D; --card:#1F2929; --ink:#ECF2F1; --muted:#95A2A2; --line:#2E3B3B; --soft:#283232;
-  --ok:#9ADB70; --ok-bg:#243A18; --ok-strong:#7CCB4A; --bad:#F09490; --bad-bg:#3D2424; --navy:#0E151C; --navy-ink:#F4F7FA; --cvs-bg:#3D3415; --cvs:#F2D479; --visit-bg:#1E2F44; --visit:#9CC4F0; color-scheme:dark }
+  --ok:#9ADB70; --ok-bg:#243A18; --ok-strong:#7CCB4A; --bad:#F09490; --bad-bg:#3D2424; --navy:#0E151C; --navy-ink:#F4F7FA; --cvs-bg:#3D3415; --cvs:#F2D479; --visit-bg:#1E2F44; --visit:#9CC4F0; --mem-bg:#221E2B; --mem-line:#3A3248; --mem-ink:#C9B3EA; --tr-bg:#3A3214; --tr-line:#6B5A22; --tr-ink:#F2D479; --fm-bg:#1E2F44; --fm-line:#36506F; --fm-ink:#9CC4F0; color-scheme:dark }
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px 40px}
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:calc(env(safe-area-inset-top,0px) + 26px) 40px}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
-.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.wrap>.top{margin-bottom:6px}
+.wrap>.chips{margin-bottom:10px}
 h1,h2,h3{margin:0;text-wrap:balance}
 button{font:inherit;cursor:pointer}
 input,select,textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:5px;padding:8px 11px;width:100%;min-width:0}
@@ -49,7 +53,7 @@ a{color:var(--ok)}
 
 .top{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .brand{font-family:var(--title);font-size:26px;line-height:1.1;color:var(--ink)}
-.brand small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);margin-top:2px}
+.brand small{display:block;font-family:var(--body);font-size:12px;color:var(--muted);margin-top:6px}
 .seg{display:flex;background:var(--soft);border-radius:6px;padding:3px}
 .seg button{border:0;background:transparent;color:var(--muted);padding:6px 16px;border-radius:6px;font-weight:700;font-size:14px}
 .seg button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
@@ -113,6 +117,26 @@ a{color:var(--ok)}
 .notice-card ul.rules{margin:10px 0 0;padding:10px 12px 10px 30px;background:var(--soft);border-radius:8px;font-size:13px;line-height:1.55}
 .notice-card ul.rules li{margin:3px 0}
 .notice-card ul.rules li::marker{content:'✔️ '}
+/* 관리자(왼쪽) ↔ 참여자(오른쪽) 구분: 참여자 쪽은 연보라 판 위에 올려서 확실히 다른 화면처럼 */
+.side-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.side-head .who{display:none;align-items:center;gap:8px;font-family:var(--title);font-size:19px;line-height:1.2}
+.side-head .who small{font-family:var(--body);font-size:12px;color:var(--muted)}
+.side-admin .who .tag,.side-member .who .tag{font-family:var(--body);font-size:12px;font-weight:700;border-radius:6px;padding:3px 10px}
+.side-admin .who .tag{background:var(--ink);color:var(--card)}
+.side-member .who .tag{background:var(--mem-ink);color:var(--card)}
+.side-member .who{color:var(--mem-ink)}
+.side-member .btn{border-color:var(--mem-line)}
+.side-member{background:var(--mem-bg);border:2px solid var(--mem-line);border-radius:20px;padding:14px 12px 18px}
+.side-member .side-head .who{display:flex}
+.side-member .side-head{padding-bottom:10px;border-bottom:1.5px dashed var(--mem-line)}
+.side-member .phone{background:var(--bg);border-color:var(--mem-line)}
+@media (max-width:959px){.side-admin .side-head{display:none}}
+@media (min-width:960px){
+  .cols{gap:30px}
+  .side-head .who{display:flex}
+  .side-member{padding:16px 16px 20px;position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;scrollbar-width:thin}
+  .side-admin .side-head{padding-bottom:10px;border-bottom:1.5px dashed var(--line)}
+}
 @media (min-width:960px){.cols{grid-template-columns:1fr 430px}.cols.single{grid-template-columns:1fr;max-width:600px;margin:0 auto;width:100%}.eyebrow{display:block}.seg{display:none}.col[hidden]{display:flex!important}.col.formhide{display:none!important}}
 
 .tabs{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--line)}
@@ -319,6 +343,102 @@ details summary{cursor:pointer;font-weight:700;font-size:14px}
 .fontprev button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:8px 12px;text-align:left;font-size:16px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 .fontprev button[aria-pressed="true"]{border-color:var(--ok-strong);background:var(--ok-bg)}
 .fontprev small{color:var(--muted);font-family:var(--body);font-size:12px}
+.cols.tradecols{grid-template-columns:1fr!important;max-width:780px;margin:0 auto;width:100%}
+.tcard{border-left:5px solid var(--line)}
+.tcard.st-need{border-left-color:var(--bad)} .tcard.st-reserved{border-left-color:var(--ok-strong)} .tcard.st-sent{border-left-color:var(--visit)} .tcard.st-done{opacity:.6}
+.tnick{font-family:var(--title);font-size:19px;line-height:1.25;word-break:break-all}
+.titem{font-size:14px;margin-top:6px;font-weight:700}
+.tmoney{font-size:13px;color:var(--muted);margin-top:4px}
+.tmoney b{color:var(--ok)}
+.cps{display:flex;flex-wrap:wrap;gap:6px}
+.cp{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 10px;font:inherit;font-size:15px;font-weight:700;cursor:pointer;text-align:left;max-width:100%;word-break:break-all}
+.cp small{font-size:11px;font-weight:400;color:var(--muted)}
+.cp:active{background:var(--ok-bg);border-color:var(--ok-strong)}
+.cp.miss{cursor:default;border-style:dashed;color:var(--bad);font-weight:400}
+.tresv{display:flex;align-items:center;gap:10px;margin-top:10px;background:var(--navy);color:var(--navy-ink);border-radius:9px;padding:10px 14px}
+.tresv>div{flex:1;min-width:0}
+.tresv small{display:block;font-size:11px;opacity:.7}
+.tresv b{font-size:16px;letter-spacing:.3px}
+.tresv b.bad{color:#FF9C98}
+.tresv .copy{color:var(--navy-ink)}
+.newkind{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media (max-width:520px){.newkind{grid-template-columns:1fr}}
+.newkind button{display:flex;flex-direction:column;gap:4px;text-align:left;border:2px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:14px;font:inherit;cursor:pointer}
+.newkind button b{font-size:16px} .newkind button span{font-size:13px;color:var(--muted);line-height:1.45}
+.newkind button:hover{border-color:var(--ok-strong)}
+.ttabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ttabs button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;border:1px solid var(--line);background:var(--card);color:var(--muted);border-radius:12px;padding:12px 14px;font:inherit;cursor:pointer}
+.ttabs button b{font-size:17px;color:var(--ink)} .ttabs button span{font-size:22px;font-weight:700;color:var(--ink);line-height:1.2} .ttabs button small{font-size:12px;line-height:1.35}
+.ttabs button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:rgba(255,255,255,.7)}
+.ttabs button[aria-selected="true"] b,.ttabs button[aria-selected="true"] span{color:var(--card)}
+@media (max-width:520px){.ttabs button small{display:none}.ttabs button{padding:10px 12px}.ttabs button b{font-size:15px}}
+.tguide{margin:2px 4px}
+.tsec{font-size:15px;font-weight:700;margin:8px 4px 0;display:flex;align-items:center;gap:8px}
+.tsec .cnt{font-size:12px;background:var(--soft);border-radius:20px;padding:1px 9px;color:var(--muted)}
+.tc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.tc.packed{background:var(--soft)}
+.tc.small{padding:12px 14px}
+.tc-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.tc-who{min-width:0}
+.tc-nick{font-size:19px;font-weight:700;line-height:1.25;word-break:break-all}
+.tc.small .tc-nick{font-size:16px}
+.tc-sub{font-size:13px;color:var(--muted);margin-top:2px}
+.tc-amt{text-align:right;font-size:16px;font-weight:700;white-space:nowrap}
+.tc-k{font-size:12px;color:var(--muted);margin:12px 0 6px}
+.tc-plan{margin-top:8px;display:inline-block;font-size:13px;font-weight:700;background:var(--cvs-bg);color:var(--cvs);border-radius:6px;padding:3px 10px}
+.tc-resv{display:flex;align-items:center;gap:12px;background:var(--navy);color:var(--navy-ink);border-radius:10px;padding:12px 16px}
+.tc-resv>div:first-child{flex:1;min-width:0} .tc-resv small{display:block;font-size:11px;opacity:.65} .tc-resv b{font-size:24px;letter-spacing:.5px}
+.tc-dd{font-size:13px;font-weight:700;text-align:right;white-space:nowrap} .tc-dd.bad{color:#FF9C98}
+.tc-resv .copy{color:var(--navy-ink)}
+.tc-opt{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;background:var(--tr-bg);border-radius:8px}
+.tc-opt b{font-size:16px;flex:1} .tc-opt span{flex:1;font-size:14px;color:var(--bad);font-weight:700} .tc-opt i{font-style:normal;font-size:11px;color:var(--muted)}
+.tc-opt.none{background:var(--bad-bg)}
+.tc-pack b.big{display:block;font-size:22px;line-height:1.35;margin:2px 0;color:var(--ink);background:var(--tr-bg);border-radius:8px;padding:6px 10px}
+.circ{width:46px;height:46px;border-radius:50%;border:1px solid var(--line);background:var(--card);font-size:21px;line-height:1;display:grid;place-items:center;cursor:pointer;padding:0}
+.circ:hover{border-color:var(--ink)}
+#tAddBtn{background:var(--tr-bg);border-color:var(--tr-line)}
+.tstart{display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin-top:14px;padding:26px 14px;border:2px dashed var(--tr-line);background:var(--tr-bg);color:var(--tr-ink);border-radius:16px;font:inherit;font-size:18px;font-weight:700;cursor:pointer}
+.tstart small{font-size:13px;font-weight:400;color:var(--muted)}
+pre.tmsg{margin-top:10px;font-size:14px}
+.tc-pack{margin-top:12px} .tc-pack small{display:block;font-size:12px;color:var(--muted)} .tc-pack b{font-size:17px;line-height:1.4}
+.tc-kv{display:grid;grid-template-columns:76px 1fr;gap:5px 10px;font-size:14px;margin:10px 0 0;padding-top:10px;border-top:1px solid var(--line)}
+.tc-kv dt{color:var(--muted)} .tc-kv dd{margin:0;min-width:0;word-break:break-word}
+.tc-dup{background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:12px 14px;font-size:14px}
+.tc-dup .btn{color:var(--ink);font-size:15px}
+.tc-note{margin-top:8px;font-size:12px;color:var(--muted)} .tc-note.bad{color:var(--bad);font-weight:700}
+.tc-act{display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+.tc-check{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:700;border:1px solid var(--line);border-radius:9px;padding:9px 12px;cursor:pointer}
+.tc-check input{width:18px;height:18px;margin:0}
+.tbig{flex:1;padding:11px 14px;font-size:15px;border-radius:9px}
+.tc-more{flex:0 0 auto}
+.tc-more>summary{list-style:none;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:13px;font-weight:700;color:var(--muted);text-align:center;cursor:pointer}
+.tc-more>summary::-webkit-details-marker{display:none}
+.tc-more[open]{flex:1 1 100%;order:3}
+.tc.small .tc-more{margin-top:8px}
+.tc-menu{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;padding:10px;background:var(--soft);border-radius:9px}
+.card>summary{cursor:pointer}
+.secsw{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px}
+.secsw button{display:flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;color:var(--muted);border-radius:999px;padding:9px 12px;font-family:var(--title);font-size:19px;cursor:pointer}
+.secsw button svg{width:24px;height:24px;flex:0 0 auto;opacity:.55}
+.secsw button[data-section="trade"][aria-pressed="true"]{background:var(--tr-bg);color:var(--tr-ink);box-shadow:inset 0 0 0 1.5px var(--tr-line)}
+.secsw button[data-section="form"][aria-pressed="true"]{background:var(--fm-bg);color:var(--fm-ink);box-shadow:inset 0 0 0 1.5px var(--fm-line)}
+.secsw button[aria-pressed="true"] svg{opacity:1}
+.landing{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:800px;width:100%;margin:26px auto 0}
+@media (max-width:620px){.landing{grid-template-columns:1fr;gap:14px}}
+.landing button{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;border:2px solid;border-radius:26px;padding:10px;font:inherit;cursor:pointer;transition:transform .15s ease}
+.landing button:hover{transform:translateY(-3px) rotate(-.6deg)}
+.landing button.fm:hover{transform:translateY(-3px) rotate(.6deg)}
+.landing button:active{transform:scale(.98)}
+.landing .tr{background:var(--tr-bg);border-color:var(--tr-line);color:var(--tr-ink)}
+.landing .fm{background:var(--fm-bg);border-color:var(--fm-line);color:var(--fm-ink)}
+.landing .in{width:100%;height:100%;display:flex;flex-direction:column;gap:6px;border:2px dashed;border-color:inherit;border-radius:18px;padding:18px 18px 16px;min-height:236px}
+.landing .pic{width:92px;height:92px;align-self:flex-end;margin:-6px -4px -14px 0}
+.landing b{font-family:var(--title);font-size:32px;line-height:1.1;font-weight:400}
+.landing span{font-size:14px;line-height:1.55;color:var(--ink);opacity:.75}
+.landing .nums{margin-top:auto;padding-top:8px;display:flex;gap:6px;flex-wrap:wrap}
+.landing .nums i{font-style:normal;font-size:13px;font-weight:700;background:var(--card);border-radius:999px;padding:4px 11px;color:var(--ink)}
+.landing .nums i.bad{background:var(--bad);color:#fff}
+.landing-hi{text-align:center;font-family:var(--title);font-size:22px;color:var(--muted);margin-top:22px}
 .kv{display:grid;grid-template-columns:76px 1fr;gap:4px 12px;font-size:14px;margin:0}
 .kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;word-break:break-word}
 </style>
@@ -481,7 +601,7 @@ const KEY='gongu-settle-v3';
 let S; try{S=JSON.parse(localStorage.getItem(KEY));}catch(e){S=null;}
 if(!S||!S.groups){ S=STANDALONE_BUILD?baseState():seed(); if(STANDALONE_BUILD) S.groups.push(blankGroup('첫 공구')); }
 S.seller=Object.assign(baseState().seller,S.seller||{}); if(!S.seller.syncUrl) S.seller.syncUrl=DEFAULT_SYNC; if(!S.notice||S.notice===OLD_NOTICE) S.notice=DEFAULT_NOTICE;
-let MIGRATED=false; S.groups.forEach(g=>{if(migrateSteps(g))MIGRATED=true;if(g.rate==null)g.rate=9.5;if(g.shipKind!=='fee'&&g.shipKind!=='ov')g.shipKind=((g.form&&g.form.products||[]).some(p=>p.fee>0)||(g.members||[]).some(m=>(m.items||[]).some(i=>+i.fee>0)))?'fee':'ov';if(!g.carts||!g.carts.length)g.carts=[{ovTotal:g.ovTotal||0,ovMode:g.ovMode||'equal'}];g.members=g.members.map(m=>Object.assign(blankMember(),m));g.members.forEach(m=>{if(!(m.cart<g.carts.length))m.cart=0;});if(!g.form)g.form=blankForm();(g.form.products||[]).forEach(p=>{p.closed=false;});if(g.form.rules==null)g.form.rules=DEFAULT_RULES;if(g.form.welcome==null||OLD_WELCOMES.includes(g.form.welcome)||g.form.welcome===OLD_WELCOMES[0].replace('어서 오세요\n','어서 오세요 🍀\n'))g.form.welcome=DEFAULT_WELCOME;if(!g.form.feeTiers)g.form.feeTiers=DEFAULT_TIERS.slice();if(g.form.openAt==null)g.form.openAt='';if(g.form.extra==null)g.form.extra=DEFAULT_EXTRA;if(g.form.store==null)g.form.store='';g.form.products=(g.form.products||[]).map(x=>Object.assign(blankProduct(),x));g.form.responses=g.form.responses||[];});
+let MIGRATED=false; S.groups.forEach(g=>{if(g.kind==='trade'&&!Array.isArray(g.trades))g.trades=[];if(migrateSteps(g))MIGRATED=true;if(g.rate==null)g.rate=9.5;if(g.shipKind!=='fee'&&g.shipKind!=='ov')g.shipKind=((g.form&&g.form.products||[]).some(p=>p.fee>0)||(g.members||[]).some(m=>(m.items||[]).some(i=>+i.fee>0)))?'fee':'ov';if(!g.carts||!g.carts.length)g.carts=[{ovTotal:g.ovTotal||0,ovMode:g.ovMode||'equal'}];g.members=g.members.map(m=>Object.assign(blankMember(),m));g.members.forEach(m=>{if(!(m.cart<g.carts.length))m.cart=0;});if(!g.form)g.form=blankForm();(g.form.products||[]).forEach(p=>{p.closed=false;});if(g.form.rules==null)g.form.rules=DEFAULT_RULES;if(g.form.welcome==null||OLD_WELCOMES.includes(g.form.welcome)||g.form.welcome===OLD_WELCOMES[0].replace('어서 오세요\n','어서 오세요 🍀\n'))g.form.welcome=DEFAULT_WELCOME;if(!g.form.feeTiers)g.form.feeTiers=DEFAULT_TIERS.slice();if(g.form.openAt==null)g.form.openAt='';if(g.form.extra==null)g.form.extra=DEFAULT_EXTRA;if(g.form.store==null)g.form.store='';g.form.products=(g.form.products||[]).map(x=>Object.assign(blankProduct(),x));g.form.responses=g.form.responses||[];});
 function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('저장 공간이 부족해요 (사진을 줄여 주세요)');} syncPush(); }
 
 let V={mode:'admin',gid:S.groups[0]?.id,mid:null,tabA:'status',tabM:'s1',adminKey:'',sub:{}};
@@ -553,7 +673,7 @@ const hasAddr=m=>m.delivery==='convenience'?!!m.cvs:!!m.addr;
 const addrText=m=>m.delivery==='convenience'?`${m.cvs||''}`:(m.zip?'['+m.zip+'] ':'')+fullAddr(m);
 const fmtDate=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일`;};
 const fmtDT=iso=>{const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
-const G=()=>S.groups.find(g=>g.id===V.gid)||S.groups[0];
+const G=()=>S.groups.find(g=>g.id===V.gid)||(V.section?null:S.groups[0]);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fullAddr=m=>[m.addr,m.addr2].filter(Boolean).join(' ');
 const nickOf=g=>g.nick||'닉네임 미설정';
@@ -606,9 +726,11 @@ function logiRow(g,m,i){
 }
 
 /* 렌더 */
+const SVG_BOX=`<svg viewBox="0 0 96 96" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M18 36 48 22l30 14v32L48 82 18 68Z" fill="#F5C26B" stroke="#8A5A00" stroke-width="3"/><path d="M18 36 48 50l30-14M48 50v32" stroke="#8A5A00" stroke-width="3"/><path d="M33 29 63 43v9" stroke="#fff" stroke-width="5" opacity=".85"/><path d="m58 58-6 9h6l-4 8 10-11h-6l4-6Z" fill="#fff" stroke="#8A5A00" stroke-width="2.4"/><circle cx="30" cy="57" r="2.4" fill="#8A5A00" stroke="none"/><circle cx="39" cy="61" r="2.4" fill="#8A5A00" stroke="none"/><path d="M31 66q4 3 8 1" stroke="#8A5A00" stroke-width="2.4"/><circle cx="27" cy="62" r="2.6" fill="#F59A8B" stroke="none" opacity=".8"/><circle cx="43" cy="66" r="2.6" fill="#F59A8B" stroke="none" opacity=".8"/></svg>`;
+const SVG_FORM=`<svg viewBox="0 0 96 96" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="22" y="16" width="52" height="66" rx="8" fill="#fff" stroke="#2F5F9E" stroke-width="3"/><rect x="36" y="11" width="24" height="11" rx="4" fill="#9CC4F0" stroke="#2F5F9E" stroke-width="3"/><path d="m31 36 4 4 7-8M31 52l4 4 7-8" stroke="#3E8E1E" stroke-width="3"/><path d="M49 37h16M49 53h12M31 68h20" stroke="#AFCBEA" stroke-width="3.5"/><path d="M67 62c-3-4-9-2-8 3 1 4 8 8 8 8s7-4 8-8c1-5-5-7-8-3Z" fill="#F59A8B" stroke="#2F5F9E" stroke-width="2.6"/></svg>`;
 function render(){
   applyFonts();
-  const app=document.getElementById('app'); const g=G(); if(g) V.gid=g.id;
+  const app=document.getElementById('app'); let g=G(); if(g) V.gid=g.id;
   if(formView){
     const fg=S.groups.find(x=>x.id===formView);
     app.innerHTML=`<div class="top"><div class="brand">${fg?esc(fg.title)+' 공구':'모집폼'}<small>${fg?'수요조사 · '+esc(nickOf(fg)):''}</small></div></div><div class="cols single"><div class="panel">${fg?renderForm(fg):`<div class="card"><h2>폼을 찾을 수 없어요</h2><p class="help">링크를 다시 확인해 주세요.</p></div>`}</div></div>`;
@@ -619,20 +741,35 @@ function render(){
     app.innerHTML=`<div class="top"><div class="brand">${g?esc(g.title)+' 공구':'정산서'}<small>${g?'정산서 · '+esc(nickOf(g)):''}</small></div></div><div class="cols single"><div class="panel mv">${m?renderMember(g):`<div class="card"><h2>${g&&g.closed?'마무리된 공구예요':'정산서를 찾을 수 없어요'}</h2><p class="help">${g&&g.closed?'공구가 마무리되어 이 정산서는 더 이상 열리지 않습니다. 참여해 주셔서 감사합니다.':'링크가 바뀌었거나 아직 준비 중입니다. 보내준 사람에게 다시 받아 주세요.'}</p></div>`}</div></div>`;
     bind(); return;
   }
-  const active=S.groups.filter(x=>!x.closed), past=S.groups.filter(x=>x.closed);
-  const chips=active.map(x=>`<button aria-pressed="${x.id===V.gid}" data-g="${x.id}">${esc(x.title)}</button>`).join('')+`<button class="add" id="addG">+ 새 공구</button>`+(past.length?`<button class="muted" id="showPast" aria-pressed="${!!V.showPast}">지난 공구 ${past.length}</button>`:'')
+  const tradeGs=S.groups.filter(x=>x.kind==='trade'&&!x.closed), formGs=S.groups.filter(x=>x.kind!=='trade'&&!x.closed);
+  if(!V.section){
+    const tAll=tradeGs.flatMap(x=>x.trades||[]); const nNeed=tAll.filter(t=>tStat(t)==='need').length, nShip=tAll.filter(t=>tStat(t)==='reserved').length;
+    const fUnpaid=formGs.reduce((a,x)=>a+x.members.filter(m=>r1(m)>0||(x.stage2Open&&r2(m)>0)).length,0);
+    app.innerHTML=`<div class="top"><div class="brand">🧾 직구 공구 정산서 🧾<small>공구 ${S.groups.length}건</small></div></div>
+    <div class="landing-hi">오늘은 어느 쪽부터 볼까요?</div>
+    <div class="landing">
+      <button class="tr" data-section="trade"><div class="in"><div class="pic">${SVG_BOX}</div><b>번개장터 거래</b><span>팔린 거래를 캡처로 정리하고<br>택배 예약 · 포장 · 발송까지 챙겨요</span><div class="nums"><i>묶음 ${tradeGs.length}개</i>${nNeed?`<i class="bad">예약할 것 ${nNeed}</i>`:''}${nShip?`<i>맡길 것 ${nShip}</i>`:''}</div></div></button>
+      <button class="fm" data-section="form"><div class="in"><div class="pic">${SVG_FORM}</div><b>폼 모집 공구</b><span>모집폼으로 신청받고<br>1차 · 2차 정산서로 진행해요</span><div class="nums"><i>공구 ${formGs.length}개</i>${fUnpaid?`<i class="bad">미입금 ${fUnpaid}명</i>`:''}</div></div></button>
+    </div>`;
+    bind(); return;
+  }
+  const isTS=V.section==='trade', inSec=x=>isTS?x.kind==='trade':x.kind!=='trade';
+  if(!g||!inSec(g)){ g=S.groups.find(x=>inSec(x)&&!x.closed)||S.groups.find(inSec)||null; V.gid=g?g.id:null; }
+  const active=S.groups.filter(x=>inSec(x)&&!x.closed), past=S.groups.filter(x=>inSec(x)&&x.closed);
+  const chips=active.map(x=>`<button aria-pressed="${x.id===V.gid}" data-g="${x.id}">${esc(x.title)}</button>`).join('')+`<button class="add" id="addG">${isTS?'+ 새 거래 묶음':'+ 새 공구'}</button>`+(past.length?`<button class="muted" id="showPast" aria-pressed="${!!V.showPast}">지난 ${isTS?'묶음':'공구'} ${past.length}</button>`:'')
     +(V.showPast&&past.length?`<div class="chips past">${past.map(x=>`<button aria-pressed="${x.id===V.gid}" data-g="${x.id}">${esc(x.title)} · ${x.closedAt?fmtDate(x.closedAt):''}</button>`).join('')}</div>`:'');
   app.innerHTML=`
     <div class="top">
-      <div class="brand">🧾 직구 공구 정산서 🧾<small>공구 ${S.groups.length}건</small></div>
-      <div class="seg" role="tablist"><button aria-pressed="${V.mode==='admin'}" data-mode="admin">내 화면</button><button aria-pressed="${V.mode==='member'}" data-mode="member">참여자 화면</button></div>
+      <div class="brand" data-home style="cursor:pointer">🧾 직구 공구 정산서 🧾<small>${isTS?'번개장터 거래':'폼 모집 공구'}</small></div>
+      ${isTS?'':`<div class="seg" role="tablist"><button aria-pressed="${V.mode==='admin'}" data-mode="admin">내 화면</button><button aria-pressed="${V.mode==='member'}" data-mode="member">참여자 화면</button></div>`}
     </div>
+    <div class="secsw"><button aria-pressed="${isTS}" data-section="trade">${SVG_BOX}번개장터 거래</button><button aria-pressed="${!isTS}" data-section="form">${SVG_FORM}폼 모집 공구</button></div>
     <div class="chips">${chips}</div>
-    ${!g?`<div class="card"><h2>공구가 없어요</h2><p class="help">"새 공구"를 눌러 만들어 주세요.</p></div>`:`
+    ${!g?`<div class="card"><h2>${isTS?'거래 묶음이 없어요':'공구가 없어요'}</h2><p class="help">"${isTS?'+ 새 거래 묶음':'+ 새 공구'}"을 눌러 만들어 주세요.</p></div>`:g.kind==='trade'?`<div class="cols tradecols"><div class="panel col">${renderTrade(g)}</div></div>`:`
     <div class="cols">
-      <div class="panel col" ${V.mode!=='admin'?'hidden':''}><div class="eyebrow">내 화면 (관리자)</div>${renderAdmin(g)}</div>
-      <div class="panel col mv ${V.tabA==='form'?'formhide':''}" ${V.mode!=='member'?'hidden':''}><div class="eyebrow light">참여자 화면 미리보기</div>${renderMember(g)}</div>
-      ${V.tabA==='form'?`<div class="panel col formprev"><div class="row between"><div class="eyebrow light">모집폼 · 참여자 폰에서 보이는 모습</div><button class="btn s" id="formReset">미리보기 초기화</button></div><div class="phone"><div class="top" style="margin-bottom:8px"><div class="brand" style="font-size:20px">${esc(g.title)} 공구<small>수요조사 · ${esc(nickOf(g))}</small></div></div><div class="panel mv">${renderForm(g)}</div></div></div>`:''}
+      <div class="panel col side-admin" ${V.mode!=='admin'?'hidden':''}><div class="side-head"><div class="who">🛠️ 내 화면 <span class="tag">관리자</span></div></div>${renderAdmin(g)}</div>
+      <div class="panel col mv side-member ${V.tabA==='form'?'formhide':''}" ${V.mode!=='member'?'hidden':''}><div class="side-head"><div class="who">📱 참여자 화면 <span class="tag">미리보기</span></div></div>${renderMember(g)}</div>
+      ${V.tabA==='form'?`<div class="panel col formprev side-member"><div class="side-head"><div class="who">📱 모집폼 <span class="tag">참여자 폰 미리보기</span></div><button class="btn s" id="formReset">미리보기 초기화</button></div><div class="phone"><div class="top" style="margin-bottom:8px"><div class="brand" style="font-size:20px">${esc(g.title)} 공구<small>수요조사 · ${esc(nickOf(g))}</small></div></div><div class="panel mv">${renderForm(g)}</div></div></div>`:''}
     </div>`}`;
   bind();
 }
@@ -1192,7 +1329,10 @@ function bind(){
   app.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy,b.dataset.label));
   app.querySelectorAll('[data-copy-el]').forEach(b=>b.onclick=()=>copyText(document.getElementById(b.dataset.copyEl).textContent,b.dataset.label));
   const ag=document.getElementById('addG'); if(ag) ag.onclick=addGroup;
+  app.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{V.section=b.dataset.section;const f=S.groups.find(x=>(V.section==='trade')===(x.kind==='trade')&&!x.closed);V.gid=f?f.id:null;V.mid=null;saveView();render();window.scrollTo(0,0);});
+  const hm=app.querySelector('[data-home]'); if(hm) hm.onclick=()=>{V.section=null;saveView();render();};
   if(!g) return;
+  if(g.kind==='trade'){bindTrade(g);return;}
   const M=id=>g.members.find(x=>x.id===id);
   const m=g.members.find(x=>x.id===V.mid)||g.members[0];
 
@@ -1345,7 +1485,9 @@ function importFromForm(g){const {alloc}=allocate(g);if(!alloc.length)return toa
   Object.entries(byNick).forEach(([nick,list])=>{let m=g.members.find(x=>x.name===nick);if(!m){m=blankMember();m.name=nick;g.members.push(m);added++;}m.items=list.map(a=>{const p=g.form.products.find(x=>x.id===a.pid);return {n:a.name,q:a.q,p:p&&p.fx?Math.round(p.fx*g.rate):(a.price||0),fx:p&&p.fx?p.fx:0,fee:p&&p.fee>0?p.fee:0};});});
   distribute(g);save();V.tabA='members';saveView();render();toast(`참여자 ${added}명 추가, ${Object.keys(byNick).length}명 구매 내역 반영`);}
 function v(id){const e=document.getElementById(id);return e?e.value.trim():'';}
-function addGroup(){const g=blankGroup('새 공구 '+(S.groups.length+1));S.groups.push(g);V.gid=g.id;V.mid=null;V.mode='admin';V.tabA='settings';save();saveView();render();toast('새 공구를 만들었어요. 이름과 닉네임을 정해 주세요');}
+function addGroup(){ if(V.section==='trade') addTradeGroup(); else addGongu(); }
+function addTradeGroup(){const g=blankGroup('번개장터 거래 '+new Date().toISOString().slice(5,10).replace('-','/'));g.kind='trade';g.trades=[];g.itemName='';S.groups.push(g);V.gid=g.id;V.mid=null;V.mode='admin';save();saveView();render();toast('거래 묶음을 만들었어요. 캡처를 올려 주세요');}
+function addGongu(){const g=blankGroup('새 공구 '+(S.groups.length+1));S.groups.push(g);V.gid=g.id;V.mid=null;V.mode='admin';V.tabA='settings';save();saveView();render();toast('새 공구를 만들었어요. 이름과 닉네임을 정해 주세요');}
 /* 도로명 주소 검색: 카카오(다음) 우편번호 서비스 — 무료, 키 없음. 실제 사이트에서만 동작 */
 let PC_READY=null;
 function loadPostcode(){ if(window.daum&&window.daum.Postcode) return Promise.resolve(); if(PC_READY) return PC_READY;
@@ -1392,6 +1534,371 @@ function editMember(g,m,isNew){
     box.querySelector('#e_save').onclick=()=>{pull();if(!m.name){toast('이름을 입력해 주세요');return;}m.items=m.items.filter(i=>i.n);if(!m.items.length)m.items=[{n:'(상품 미정)',q:1,p:0,fx:0,fee:0}];distribute(g);save();render();toast('저장했어요');};
   };
   draw();row.after(box);box.querySelector('#e_name').focus();
+}
+
+
+/* ===== 번개장터 택배 거래: 캡처 글자 → 거래별 정리 ===== */
+const T_LABELS=/^(주문\s*상세|판매\s*정보|배송지\s*정보|거래\s*정보|거래\s*요청\s*사항|예약\s*정보|자주\s*묻는\s*질문|번개톡|배송\s*준비\s*중?|상품\s*준비\s*중|배송\s*완료|픽업\s*대기|상품\s*접수\s*대기\s*중?|예약\s*완료|이용\s*안내|예약\s*취소|예약\s*변경|판매\s*불가|운송장.*|배송\s*방법\s*변경|배송\s*예약.*|어디로.*|내\s*계좌로.*|번개머니.*|선택한.*|무음.*|서비스|예약번호|유효기간|상품정보|배송료|보내는\s*사람|받는\s*사람|구매자|거래방법|진행중|전체|판매완료|취소\/환불|정산내역|거래내역)$/;
+const T_PHONE=/(0(?:1[016789]|50\d|2|[3-6]\d|70)[-.\s]?\d{3,4}[-.\s]?\d{4})(\s*\(?\s*안심\s*번호\s*\)?)?/;
+const T_CVS=/((?:GS25|GS|CU|세븐일레븐|이마트24|emart24)\s*[가-힣A-Za-z0-9]+점)/;
+const tDigits=s=>String(s||'').replace(/\D/g,'');
+const tNum=s=>+String(s||'').replace(/[^\d]/g,'')||0;
+const tFmtPhone=s=>{const d=tDigits(s);if(d.length===11)return d.replace(/(\d{3,4})(\d{4})(\d{4})/,'$1-$2-$3');if(d.length===12)return d.replace(/(\d{4})(\d{4})(\d{4})/,'$1-$2-$3');if(d.length===10)return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3');return s||'';};
+/* 줄바꿈으로 끊긴 주소 잇기: 쉼표 뒤만 띄우고 나머지는 붙임 (폰 화면은 글자 단위로 줄이 바뀜) */
+function tJoin(lines){let s='';lines.forEach(l=>{l=l.trim();if(!l)return;if(!s){s=l;return;}s+=(/[,，]$/.test(s)||(/[가-힣]$/.test(s)&&/^\d/.test(l)))?' '+l:l;});return s.replace(/\s+/g,' ').trim();}
+function tSplitAddr(full){const s=String(full||'').trim();let m=s.match(/^(.*\))\s*,\s*(.+)$/);if(m)return [m[1].trim(),m[2].trim()];const i=s.lastIndexOf(',');if(i>0)return [s.slice(0,i).trim(),s.slice(i+1).trim()];return [s,''];}
+function tLines(text){return String(text||'').replace(/\r/g,'').replace(/[ㆍ•∙・]/g,'·').replace(/[～〜]/g,'~').replace(/[›＞]/g,'>').split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x&&!/^\d{1,2}[:;]\d{2}$/.test(x));}
+const tNick=s=>{s=String(s||'').replace(/^[^가-힣A-Za-z0-9]+/,'').replace(/\s*>\s*$/,'').trim();return /[가-힣A-Za-z0-9]{2,}/.test(s)&&!/^(거래|거래방법|구매자|번개톡)$/.test(s)?s:'';};
+const tIsName=s=>!!s&&/^[가-힣A-Za-z][가-힣A-Za-z0-9 ]{0,14}$/.test(s)&&!T_LABELS.test(s)&&!/^(GS|CU)/.test(s);
+function tAmountAfter(text,re){const m=text.match(re);return m?tNum(m[1]):0;}
+
+/* 거래내역 목록 캡처: 카드 여러 개 → 조각 여러 개 */
+function tParseList(lines){
+  const nickIdx=[];lines.forEach((l,i)=>{const m=l.match(/^(.*?)\s*\/\s*(택배\s*거래|직거래|택배)$/);if(m&&m[1].trim()){const nk=tNick(m[1].trim().split(' ').pop());if(nk)nickIdx.push({i,nick:nk});}});
+  const prices=[];lines.forEach((l,i)=>{const m=l.match(/^(?:[^\d+\-]{0,6}\s)?(\d{1,3}(?:,\d{3})+)\s*원$/);if(m)prices.push({i,v:tNum(m[1])});});
+  const items=[];lines.forEach((l,i)=>{if(/^\S{0,4}\s*\[/.test(l)&&/\]/.test(l))items.push({i,v:l.replace(/^[^\[]*/,'')});});
+  const btn=[];lines.forEach((l,i)=>{if(/배송\s*예약\s*완료/.test(l))btn.push({i,v:'reserved'});else if(/배송\s*예약\s*하기/.test(l))btn.push({i,v:'need'});});
+  const same=prices.length===nickIdx.length, sameI=items.length===nickIdx.length, sameB=btn.length===nickIdx.length;
+  const near=(arr,i)=>{let best=null;arr.forEach(a=>{if(a.i<i&&(!best||a.i>best.i))best=a;});return best;};
+  const after=(arr,i,j)=>arr.find(a=>a.i>i&&(j==null||a.i<j));
+  return nickIdx.map((n,k)=>{const nx=nickIdx[k+1]?nickIdx[k+1].i:null;
+    const p=same?prices[k]:near(prices,n.i), it=sameI?items[k]:near(items,n.i), b=sameB?btn[k]:after(btn,n.i,nx);
+    return {src:'list',nick:n.nick,price:p?p.v:0,item:it?it.v:'',listStatus:b?b.v:''};});
+}
+
+/* 캡처 한 장(또는 붙여 넣은 글 한 덩어리) → 조각 배열 */
+function tParse(text,me){
+  me=me||{};const lines=tLines(text);const all=lines.join('\n');
+  if(!lines.length) return [];
+  // 1) 거래내역 목록
+  if(lines.some(l=>/\/\s*택배\s*거래$/.test(l))&&!/주문\s*번호/.test(all)) return tParseList(lines);
+  const f={src:'detail',raw:String(text).slice(0,3000)};
+  // 2) 배송 예약 정보
+  const rv=all.match(/(?:^|[^\d])([1-9]\d{3})[-\s](\d{4})[-\s](\d{4})(?!\d)/);
+  if(rv&&/예약|반값|편의점\s*택배|서비스/.test(all)){
+    f.src='resv'; f.resvNo=`${rv[1]}-${rv[2]}-${rv[3]}`;
+    f.resvService=/반값/.test(all)?'GS25 반값택배':/편의점\s*택배/.test(all)?'편의점택배':'';
+    const u=all.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일\s*(\(\s*[월화수목금토일]\s*\))?\s*까지/); if(u) f.resvUntil=`${+u[1]}월 ${+u[2]}일${u[3]?' '+u[3].replace(/\s/g,''):''}`;
+    const at=all.match(/예약\s*완료\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일\s*(\d{1,2}[:;]\d{2})/); if(at) f.resvAt=`${+at[1]}월 ${+at[2]}일 ${at[3].replace(';',':')}`;
+    // 상품정보 (두 줄로 나뉘면 이어 붙임)
+    const ii=lines.findIndex(l=>/\[[^\]]+\]/.test(l)); if(ii>=0){let it=lines[ii].replace(/^.*?(\[)/,'$1').replace(/^상품\s*정보\s*/,'');const nx=lines[ii+1]; if(nx&&!/\d{3}|배송료|보내는|받는|선불|·/.test(nx)&&nx.length<=30) it+=' '+nx; f.item=it.trim(); f.itemFull=true;}
+    // 받는 사람: "이름 · 전화" 쌍 중 내 것이 아닌 마지막 것
+    const pairs=[];lines.forEach((l,i)=>{const m=l.match(/([가-힣A-Za-z][가-힣A-Za-z0-9 ]{0,14}?)\s*·\s*(0\d{1,3}[-.\s]?\d{3,4}[-.\s]?\d{4})/);if(m)pairs.push({i,name:m[1].replace(/^(받는\s*사람|보내는\s*사람)\s*/,'').trim(),phone:m[2]});});
+    const myP=tDigits(me.phone), myN=String(me.name||'').trim();
+    const recvIdx=lines.findIndex(l=>/받는\s*사람/.test(l));
+    let cand=pairs.filter(p=>!(myP&&tDigits(p.phone)===myP)&&!(myN&&p.name===myN));
+    if(recvIdx>=0){const af=cand.filter(p=>p.i>=recvIdx); if(af.length) cand=af;}
+    const r=cand[cand.length-1];
+    if(r){ f.rName=r.name; f.rPhone=tFmtPhone(r.phone);
+      const cv=lines.slice(Math.max(0,r.i-2),r.i+1).join(' ').match(T_CVS)||all.slice(all.indexOf(r.phone)).match(T_CVS);
+      // 반값택배: 받는 사람 위·아래에 편의점명
+      const cvs2=(()=>{for(let k=Math.max(0,(recvIdx>=0?recvIdx:r.i-2));k<=Math.min(lines.length-1,r.i+1);k++){const m=lines[k].match(T_CVS);if(m)return m[1];}return '';})();
+      if(cvs2||(/반값/.test(all)&&cv)) f.cvs=(cvs2||cv[1]).replace(/\s+/g,'');
+      else { const ad=[];for(let k=r.i+1;k<Math.min(lines.length,r.i+4);k++){const l=lines[k];if(T_LABELS.test(l)||/자주|이용안내/.test(l))break;if(/[가-힣]/.test(l)||/^\d/.test(l))ad.push(l);} if(ad.length){const [a,b]=tSplitAddr(tJoin(ad)); f.addr=a; f.addr2=b;} }
+    }
+    return [f];
+  }
+  // 3) 주문 상세
+  const on=all.match(/주문\s*번호\s*[:#]?\s*(\d{9})(?!\d)/)||all.match(/(?:^|[^\d])(1\d{8})(?!\d)/); if(on) f.orderNo=on[1];
+  const oa=all.match(/(\d{2})\s*년\s*(\d{1,2})\s*월\s*(\d{1,2})\s*일\s*(\d{1,2})[:;]?(\d{2})/); if(oa) f.orderAt=`20${oa[1]}-${String(oa[2]).padStart(2,'0')}-${String(oa[3]).padStart(2,'0')} ${oa[4]}:${oa[5]}`;
+  else {const od=all.match(/(20\d{2})\.(\d{1,2})\.(\d{1,2})/); if(od) f.orderAt=`${od[1]}-${od[2].padStart(2,'0')}-${od[3].padStart(2,'0')}`;}
+  const nk=all.match(/구매자\s*[:]?\s*([^\n>]+?)\s*>?\s*(?:\n|$)/); if(nk&&tNick(nk[1])&&!/^거래/.test(nk[1])) f.nick=tNick(nk[1]);
+  else {const ki=lines.findIndex(l=>/^구매자$/.test(l)); if(ki>=0&&lines[ki+1]) f.nick=tNick(lines[ki+1]);}
+  if(!f.nick) delete f.nick;
+  const me2=all.match(/거래\s*방법\s*[:]?\s*([^\n]+)/); if(me2&&!/^\s*$/.test(me2[1])) f.method=me2[1].trim();
+  else {const mm=all.match(/(GS\s*반값\s*택배|CU\s*알뜰\s*택배|일반\s*택배\s*\(\s*(?:선불|착불)\s*\)|편의점\s*택배)/); if(mm) f.method=mm[1].replace(/\s+/g,'');}
+  const it=lines.find(l=>/\[[^\]]+\]/.test(l)); if(it) f.item=it.replace(/^.*?(\[)/,'$1').replace(/\s*(\.{2,}|…|\.…)\s*$/,'').trim();
+  // 금액
+  f.price=tAmountAfter(all,/상품\s*금액\s*[:]?\s*([\d,]+)\s*원/);
+  f.ship=tAmountAfter(all,/배송비\s*[:]?\s*\+?\s*([\d,]+)\s*원/);
+  f.fee=tAmountAfter(all,/수수\s*료?\s*(?:ⓘ|\(i\)|i)?\s*[-−–]?\s*([\d,]+)\s*원/);
+  f.payout=tAmountAfter(all,/입금\s*예정\s*금액\s*(?:ⓘ|\(i\)|i)?\s*[:]?\s*([\d,]+)\s*원/);
+  const si=all.search(/판매\s*정보|상품\s*금액/);
+  if(si>=0&&(!f.price||!f.payout||!f.ship||!f.fee)){ // 라벨과 숫자가 따로 읽힌 경우: 순서로 맞추기
+    const seg=all.slice(si).split(/배송지\s*정보/)[0]; const am=[...seg.matchAll(/([+\-−–]?)\s*(\d{1,3}(?:,\d{3})+|\d+)\s*원/g)].map(m=>({s:m[1],v:tNum(m[2])}));
+    const un=am.filter(a=>!a.s&&a.v>=1000);
+    if(!f.price&&un[0]) f.price=un[0].v; if(!f.ship){const p=am.find(a=>a.s==='+');if(p)f.ship=p.v;} if(!f.fee){const p=am.find(a=>a.s&&a.s!=='+');if(p)f.fee=p.v;} if(!f.payout&&un.length>1) f.payout=un[un.length-1].v;
+  }
+  if(!f.price&&it){const ix=lines.indexOf(it);const nx=lines.slice(ix+1,ix+3).join(' ').match(/(\d{1,3}(?:,\d{3})+)\s*원/);if(nx)f.price=tNum(nx[1]);}
+  if(f.price&&!f.payout&&f.ship&&f.fee) f.payout=f.price+f.ship-f.fee;
+  // 배송지
+  const bi=lines.findIndex(l=>/배송지\s*정보/.test(l));
+  let end=lines.findIndex((l,i)=>i>bi&&/거래\s*요청|거래\s*정보|주문\s*번호|자주\s*묻는/.test(l)); if(end<0) end=lines.length;
+  const reg=lines.slice(bi>=0?bi+1:0,end);
+  const pi=reg.findIndex(l=>T_PHONE.test(l)&&!/·/.test(l));
+  if(pi>=0&&(bi>=0||reg.some(l=>/\(\d{5}\)/.test(l))||reg.some(l=>T_CVS.test(l)))){
+    const pm=reg[pi].match(T_PHONE); f.rPhone=tFmtPhone(pm[1]); if(pm[2]) f.safe=true;
+    const zi=reg.findIndex(l=>/\(\d{5}\)/.test(l));
+    const ci=reg.findIndex(l=>T_CVS.test(l));
+    if(zi>=0&&(ci<0||zi<ci)){ f.zip=reg[zi].match(/\((\d{5})\)/)[1];
+      const adl=[reg[zi].replace(/^.*?\(\d{5}\)\s*/,'')].concat(reg.slice(zi+1,pi>zi?pi:reg.length).filter(l=>!T_PHONE.test(l)));
+      const [a,b]=tSplitAddr(tJoin(adl)); f.addr=a; f.addr2=b;
+      const nm=reg[zi-1]; if(tIsName(nm)) f.rName=nm;
+    } else if(ci>=0){ f.cvs=reg[ci].match(T_CVS)[1].replace(/\s+/g,''); const ca=tJoin(reg.slice(ci+1).filter(l=>!T_PHONE.test(l))); if(ca) f.cvsAddr=ca;
+      const nm=reg[pi-1]; if(tIsName(nm)) f.rName=nm;
+    } else { const nm=reg[pi-1]; if(tIsName(nm)) f.rName=nm; }
+  }
+  const rq=all.match(/거래\s*요청\s*사항\s*\n([^\n]+)/); if(rq&&!T_LABELS.test(rq[1])) f.memo=rq[1].trim();
+  return [f];
+}
+
+/* 조각들을 거래로 합치기. order: 올린 순서. 반환 {added, updated, loose} */
+function tMerge(trades,frags,mk){
+  const res={added:0,updated:0,loose:0,touched:new Set()};
+  const find=f=>{const d=tDigits(f.rPhone);
+    return (f.orderNo&&trades.find(t=>t.orderNo===f.orderNo))
+      ||(f.resvNo&&trades.find(t=>t.resvNo===f.resvNo||(t.resvAlt||[]).includes(f.resvNo)))
+      ||(d.length>=10&&trades.find(t=>tDigits(t.rPhone)===d))
+      ||(f.nick&&trades.find(t=>t.nick&&t.nick===f.nick))
+      ||(f.rName&&(()=>{const c=trades.filter(t=>t.rName===f.rName);return c.length===1?c[0]:null;})())||null;};
+  const keyed=f=>!!(f.orderNo||(f.resvNo&&tDigits(f.rPhone).length>=10)||f.nick||tDigits(f.rPhone).length>=10);
+  const put=(t,f)=>{const before=JSON.stringify(t);
+    if(f.orderAt&&(!t.orderAt||f.orderAt.length>t.orderAt.length))t.orderAt=f.orderAt;
+    if(f.item)f.item=f.item.replace(/\s*(\.{2,}|…|\.…)\s*$/,'').trim();
+    ['orderNo','nick','method','price','ship','fee','payout','rName','rPhone','zip','addr','addr2','cvs','cvsAddr','memo'].forEach(k=>{if(f[k]&&!t[k])t[k]=f[k];});
+    if(f.safe) t.safe=true;
+    if(f.item&&(!t.item||(f.itemFull&&!t.itemFull)||(!t.itemFull&&f.item.length>t.item.length))){t.item=f.item;if(f.itemFull)t.itemFull=true;}
+    if(f.resvNo){ if(!t.resvNo){t.resvNo=f.resvNo;t.resvService=f.resvService||t.resvService;t.resvUntil=f.resvUntil||t.resvUntil;t.resvAt=f.resvAt||t.resvAt;}
+      else if(t.resvNo!==f.resvNo){t.resvAlt=t.resvAlt||[];if(!t.resvAlt.includes(f.resvNo))t.resvAlt.push(f.resvNo);}
+      else {if(f.resvUntil&&!t.resvUntil)t.resvUntil=f.resvUntil;if(f.resvAt&&!t.resvAt)t.resvAt=f.resvAt;}
+      if(!t.status||t.status==='need')t.status='reserved';}
+    if(f.listStatus==='reserved'&&(!t.status||t.status==='need'))t.status='reserved';
+    if(f.listStatus==='need'&&!t.resvNo)t.status='need';
+    if(f.raw){t.raw=t.raw||[];if(!t.raw.includes(f.raw)){t.raw.push(f.raw);if(t.raw.length>6)t.raw.shift();}}
+    if(JSON.stringify(t)!==before)res.touched.add(t.id);};
+  const rank={detail:0,list:1,resv:2};
+  const idx=frags.map((f,i)=>({f,i})); const owner=new Array(frags.length).fill(null);
+  idx.filter(x=>keyed(x.f)).sort((a,b)=>(rank[a.f.src]??3)-(rank[b.f.src]??3)||(a.f.orderNo?0:1)-(b.f.orderNo?0:1)||a.i-b.i).forEach(({f,i})=>{
+    let t=find(f); if(!t){t=mk();trades.push(t);res.added++;} put(t,f); owner[i]=t;});
+  idx.filter(x=>!keyed(x.f)).forEach(({f,i})=>{ // 열쇠 없는 조각: 앞(없으면 뒤) 캡처의 거래에 붙임
+    if(!(f.price||f.rName||f.addr||f.cvs||f.item||f.memo||f.resvNo)) return;
+    let t=find(f); if(!t){for(let k=i-1;k>=0;k--)if(owner[k]){t=owner[k];break;}}
+    if(t&&f.resvNo&&t.resvNo&&t.resvNo!==f.resvNo&&!(t.resvAlt||[]).includes(f.resvNo)){t=mk();trades.push(t);res.added++;}
+    else if(t&&!find(f)) t.guess=true; if(!t){for(let k=i+1;k<frags.length;k++)if(owner[k]){t=owner[k];break;}}
+    if(!t){res.loose++;return;} put(t,f); owner[i]=t;});
+  res.updated=[...res.touched].length;
+  return res;
+}
+/* 거래 a를 b에 합치기 (b의 빈 칸만 채움) */
+function tAbsorb(b,a){
+  ['orderNo','orderAt','nick','method','item','price','ship','fee','payout','rName','rPhone','zip','addr','addr2','cvs','cvsAddr','memo','resvService','resvUntil','resvAt','tracking','note'].forEach(k=>{if(a[k]&&!b[k])b[k]=a[k];});
+  if(a.safe)b.safe=true;
+  [a.resvNo].concat(a.resvAlt||[]).filter(Boolean).forEach(x=>{if(!b.resvNo)b.resvNo=x;else if(x!==b.resvNo){b.resvAlt=b.resvAlt||[];if(!b.resvAlt.includes(x))b.resvAlt.push(x);}});
+  b.raw=(b.raw||[]).concat(a.raw||[]).slice(-6);
+  if(b.resvNo&&(!b.status||b.status==='need'))b.status='reserved';
+  delete b.guess;
+}
+
+/* ===== 번개장터 택배 거래 화면 ===== */
+const TST={need:{t:'예약 필요',c:'no'},reserved:{t:'예약 완료 · 접수 전',c:'ok'},sent:{t:'편의점 접수함',c:'ok'},done:{t:'배송 완료',c:''}};
+const TST_ORDER={need:0,reserved:1,sent:2,done:3};
+const blankTrade=()=>({id:uid(8),plan:'',nick:'',orderNo:'',orderAt:'',method:'',item:'',price:0,ship:0,fee:0,payout:0,rName:'',rPhone:'',safe:false,zip:'',addr:'',addr2:'',cvs:'',cvsAddr:'',memo:'',resvNo:'',resvAlt:[],resvService:'',resvUntil:'',resvAt:'',status:'need',tracking:'',note:'',raw:[]});
+const tStat=t=>{const s=t.status||'need';return s==='need'&&t.resvNo?'reserved':s;};
+const tIsCvs=t=>!!t.cvs||/반값/.test((t.method||'')+(t.resvService||''));
+function tDday(t){const m=String(t.resvUntil||'').match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);if(!m)return null;const n=new Date();let d=new Date(n.getFullYear(),+m[1]-1,+m[2],23,59);if(d-n< -180*864e5)d=new Date(n.getFullYear()+1,+m[1]-1,+m[2],23,59);const t0=new Date(n.getFullYear(),n.getMonth(),n.getDate());return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-t0)/864e5);}
+const tMine=()=>({name:S.seller.holder||'',phone:S.seller.myPhone||''});
+function tMissing(t){const x=[];if(!t.rName)x.push('받는 분');if(!t.rPhone)x.push('연락처');if(tIsCvs(t)){if(!t.cvs)x.push('도착 편의점');}else if(!t.addr)x.push('주소');if(!t.nick)x.push('구매자 닉네임');return x;}
+function tCopyAll(g,t){const L=[`[${t.nick||'닉네임 없음'}] ${t.item||''}`];if(t.option)L.push(`옵션: ${t.option}`);
+  L.push(`받는 분: ${t.rName} / ${t.rPhone}${t.safe?' (안심번호)':''}`);
+  if(tIsCvs(t))L.push(`도착 편의점: ${t.cvs}${t.cvsAddr?' ('+t.cvsAddr+')':''}`);else L.push(`주소: ${t.zip?'('+t.zip+') ':''}${[t.addr,t.addr2].filter(Boolean).join(', ')}`);
+  if(t.memo)L.push(`요청사항: ${t.memo}`);if(t.resvNo)L.push(`예약번호: ${t.resvNo}${t.resvUntil?' ('+t.resvUntil+'까지)':''}`);if(t.orderNo)L.push(`주문번호: ${t.orderNo}`);return L.join('\n');}
+const cp=(label,val,show)=>val?`<button class="cp" data-copy="${esc(val)}" data-label="${esc(label)}"><small>${esc(label)}</small><span>${esc(show||val)}</span></button>`:`<span class="cp miss"><small>${esc(label)}</small><span>없음</span></span>`;
+
+const DEFAULT_OPTS='치이카와/치이, 하치와레/하치/하찌, 우사기, 모몽가/몽가, 쿠리만쥬/쿠리, 랏코, 시사, 밤만쥬, 후루혼, 카니, 오데코';
+const tOptList=g=>String(g.optList==null?DEFAULT_OPTS:g.optList).split(/[,\n]/).map(x=>x.split('/').map(y=>y.trim()).filter(Boolean)).filter(a=>a.length).map(a=>({name:a[0],al:a}));
+/* 대화 글에서 옵션(캐릭터) 이름과 개수 찾기. 상품 제목 줄([공구] …)은 뺌 */
+function tExtractOpts(text,list){
+  let ls=String(text||'').split('\n').filter(l=>!/\[[^\]]*\]|도시락|공구|\d{1,3},\d{3}\s*원/.test(l));
+  const hasName=l=>list.some(o=>o.al.some(a=>l.includes(a)));
+  const bul=ls.filter(l=>/^\s*[•·∙ㆍ*\-]/.test(l)&&hasName(l)); if(bul.length) ls=bul; /* "• 치이 1 하치 1" 같은 정리 줄이 있으면 그 줄만 */
+  let src='\n'+ls.join('\n')+'\n';
+  const found={},order=[];
+  const all=[];list.forEach(o=>o.al.forEach(a=>all.push({a,o})));all.sort((x,y)=>y.a.length-x.a.length);
+  all.forEach(({a,o})=>{const re=new RegExp(a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');let m;
+    while((m=re.exec(src))){const after=src.slice(m.index+a.length,m.index+a.length+8).match(/^\s*(?:[xX×*]\s*)?(\d{1,2})\s*(?:개|ea|EA|마리)?/);
+      const q=after?+after[1]:1; if(!(o.name in found)){found[o.name]=q;order.push({n:o.name,i:m.index});} else {found[o.name]=Math.max(found[o.name],q);const e=order.find(x=>x.n===o.name);if(m.index<e.i)e.i=m.index;}}
+    src=src.replace(re,' '.repeat(a.length));});
+  return order.sort((a,b)=>a.i-b.i).map(x=>({n:x.n,q:found[x.n]}));}
+const tOptText=arr=>arr.map(x=>x.n+' '+x.q).join(' · ');
+const DEFAULT_SHIPMSG='{닉네임}님 안녕하세요 :)\n주문하신 {옵션} 배송되었습니다~\n받아보시고 구매확정 부탁드려요! 좋은 하루 되세요 🌷';
+const tShipMsg=(g,t)=>String(g.shipMsg||DEFAULT_SHIPMSG).replace(/\{닉네임\}/g,t.nick||t.rName||'').replace(/\{옵션\}/g,t.option||tShortItem(t.item)||'상품').replace(/\{받는 ?분\}/g,t.rName||'');
+const tShortItem=s=>String(s||'').replace(/^\[[^\]]*\]\s*/,'').replace(/^\d+차금?\s*[xX×]\s*/,'').trim();
+function tPick(t,no){const all=[t.resvNo].concat(t.resvAlt||[]).filter(Boolean);t.resvNo=no;t.resvIgnored=all.filter(x=>x!==no);t.resvAlt=[];}
+function renderTrade(g){
+  const ts=g.trades||[];
+  const by=k=>ts.filter(t=>tStat(t)===k).sort((a,b)=>((tDday(a)??99)-(tDday(b)??99))||String(a.orderAt).localeCompare(String(b.orderAt)));
+  const need=by('need'), resv=by('reserved').sort((a,b)=>(a.packed?1:0)-(b.packed?1:0)), sent=by('sent'), done=by('done');
+  const pay=ts.reduce((a,t)=>a+(+t.payout||0),0);
+  const itemName=g.itemName||'굿즈';
+  if(!['resv','ship','done'].includes(V.tTab)) V.tTab=need.length||!resv.length?'resv':'ship';
+  const T=V.tTab;
+  const chips=t=>{const cvs=tIsCvs(t);return `${cp('물품명',itemName)}${cp('받는 분',t.rName)}${cp('연락처',tDigits(t.rPhone),t.rPhone)}${cvs?cp('도착 편의점',t.cvs):cp('우편번호',t.zip)+cp('주소',t.addr)+cp('상세주소',t.addr2)}`;};
+  const destLine=t=>tIsCvs(t)?`<b>${esc(t.cvs||'편의점 미정')}</b>${t.cvsAddr?`<span class="muted"> · ${esc(t.cvsAddr)}</span>`:''}`:`${t.zip?'('+esc(t.zip)+') ':''}${esc([t.addr,t.addr2].filter(Boolean).join(' ')||'주소 없음')}`;
+  const more=(t,st)=>`<details class="tc-more"><summary>더보기</summary><div class="tc-menu">
+      <button class="btn s" data-copy="${esc(tCopyAll(g,t))}" data-label="거래 정보">전체 복사</button>
+      <button class="btn s" data-tedit="${t.id}">수정</button>
+      <select data-tstat="${t.id}" style="width:auto;padding:4px 8px;font-size:13px">${Object.keys(TST).map(k=>`<option value="${k}" ${st===k?'selected':''}>${TST[k].t}</option>`).join('')}</select>
+      <button class="btn s danger" data-tdel="${t.id}">삭제</button>
+      <div class="muted" style="font-size:12px;width:100%;line-height:1.6">${t.orderNo?'주문번호 '+esc(t.orderNo)+' · ':''}${esc(t.orderAt||'')}${t.price?`<br>상품 ${(+t.price).toLocaleString('ko-KR')} + 배송비 ${(+t.ship||0).toLocaleString('ko-KR')} − 수수료 ${(+t.fee||0).toLocaleString('ko-KR')} = 입금 예정 ${won(+t.payout||0)}`:''}${t.method?'<br>구매자 선택: '+esc(t.method):''}${t.memo?'<br>요청사항: '+esc(t.memo):''}</div>
+      ${st!=='need'?`<div class="cps" style="width:100%">${chips(t)}</div>`:''}
+    </div></details>`;
+  const warn=t=>{const miss=tMissing(t);return `${miss.length?`<div class="tc-note bad">빠진 정보: ${miss.join(', ')}</div>`:''}${t.guess?`<div class="tc-note">캡처 순서로 추정해 붙인 정보가 있어요. 맞는지 확인해 주세요.</div>`:''}`;};
+  /* 1) 예약하기 */
+  const resvCard=t=>`<div class="tc">
+      <div class="tc-top"><div class="tc-who"><div class="tc-nick">${esc(t.nick||'닉네임 없음')}</div><div class="tc-sub">${esc(tShortItem(t.item)||'상품 정보 없음')}</div></div><div class="tc-amt">${t.payout?won(+t.payout):''}</div></div>
+      <div class="tc-opt ${t.option?'':'none'}">${t.option?`<b>${esc(t.option)}</b>${t.optGuess?'<i>대화에서 찾음 · 확인</i>':''}`:'<span>옵션 미입력</span>'}<button class="btn s" data-topt="${t.id}">${t.option?'고치기':'대화로 넣기'}</button></div>
+      ${t.plan?`<div class="tc-plan">발송 예정 · ${esc(t.plan)}</div>`:''}
+      <div class="tc-k">${tIsCvs(t)?'반값택배 · 편의점으로':'편의점택배 · 집으로'}</div>
+      <div class="cps">${chips(t)}</div>
+      ${t.memo?`<div class="tc-note">요청사항: ${esc(t.memo)}</div>`:''}
+      ${warn(t)}
+      <div class="tc-act"><button class="btn p tbig" data-tgo="${t.id}:reserved">예약 끝</button>${more(t,'need')}</div>
+    </div>`;
+  /* 2) 포장·발송 */
+  const shipCard=t=>{const dd=tDday(t);
+    return `<div class="tc ${t.packed?'packed':''}">
+      ${`<div class="tc-resv"><div><small>${esc(t.resvService||'예약번호')}</small><b class="num">${t.resvNo?esc(t.resvNo):'예약번호 없음'}</b></div>${t.resvUntil?`<div class="tc-dd ${dd!=null&&dd<=1?'bad':''}"><small>유효기간</small>${esc(t.resvUntil.replace(/\s*\(.\)/,''))}${dd!=null?` · ${dd<0?'지남':dd===0?'오늘':'D-'+dd}`:''}</div>`:''}${t.resvNo?`<button class="copy" data-copy="${esc(tDigits(t.resvNo))}" data-label="예약번호">${ICON_COPY}</button>`:''}</div>`}
+      <div class="tc-pack"><div class="row between" style="align-items:flex-end"><small>넣을 물건</small><button class="btn s" data-topt="${t.id}">${t.option?'옵션 고치기':'대화로 옵션 넣기'}</button></div>
+        ${t.option?`<b class="big">${esc(t.option)}</b>${t.optGuess?'<div class="tc-note">대화에서 찾은 옵션이에요. 맞는지 한 번 확인해 주세요.</div>':''}<div class="tc-note">${esc(t.item||'')}</div>`:`<b>${esc(t.item||'상품 정보 없음')}</b><div class="tc-note bad">어떤 캐릭터인지 아직 몰라요. 번개톡 대화를 넣어 주세요.</div>`}</div>
+      <dl class="tc-kv"><dt>받는 분</dt><dd><b>${esc(t.rName||'?')}</b> · ${esc(t.rPhone||'')}</dd><dt>${tIsCvs(t)?'도착 편의점':'주소'}</dt><dd>${destLine(t)}</dd><dt>구매자</dt><dd>${esc(t.nick||'')}</dd></dl>
+      ${warn(t)}
+      <div class="tc-act"><label class="tc-check"><input type="checkbox" data-tpack="${t.id}" ${t.packed?'checked':''}> 포장 완료</label><button class="btn p tbig" data-tgo="${t.id}:sent">편의점에 맡김</button>${more(t,'reserved')}</div>
+    </div>`;};
+  const smallCard=(t,st)=>`<div class="tc small"><div class="tc-top"><div class="tc-who"><div class="tc-nick">${esc(t.nick||'닉네임 없음')}</div><div class="tc-sub">${t.option?esc(t.option)+' · ':''}${esc(t.rName||'')} · ${tIsCvs(t)?esc(t.cvs||''):esc(t.addr||'')}${t.resvNo?' · '+esc(t.resvNo):''}</div></div>
+      </div>${st==='sent'?`<pre class="msg tmsg">${esc(tShipMsg(g,t))}</pre><div class="tc-act"><button class="btn p tbig" data-copy="${esc(tShipMsg(g,t))}" data-label="${esc(t.nick||'')}님 발송 문구">발송 문구 복사</button><button class="btn s" data-tgo="${t.id}:done">받음 확인</button>${more(t,st)}</div>`:`<div class="tc-act"><button class="btn s" data-tgo="${t.id}:sent">되돌리기</button>${more(t,st)}</div>`}</div>`;
+  const empty=m=>`<div class="card"><p class="help" style="text-align:center;padding:14px 0">${m}</p></div>`;
+  return `
+    <div class="card">
+      <div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><h2 style="margin:0;border:0;padding:0">${esc(g.title)}</h2><span class="muted" style="font-size:13px">거래 ${ts.length}건 · 입금 예정 ${won(pay)}</span></div>
+        <div class="row" style="flex:0 0 auto;gap:8px"><button class="circ" id="tAddBtn" title="캡처로 거래 추가" aria-label="캡처로 거래 추가">📷</button><button class="circ" id="tSetBtn" title="이 묶음 관리" aria-label="이 묶음 관리">⚙️</button></div></div>
+      ${ts.length?'':`<button class="tstart" id="tAddBtn2">📷 캡처 올려서 시작하기<small>주문 상세 · 배송 예약 · 번개톡 대화 캡처</small></button>`}
+    </div>
+    <div class="ttabs" role="tablist">
+      <button role="tab" aria-selected="${T==='resv'}" data-ttab="resv"><b>예약하기</b><span>${need.length}건</span><small>택배 예약 화면에 붙여 넣을 정보</small></button>
+      <button role="tab" aria-selected="${T==='ship'}" data-ttab="ship"><b>포장 · 발송</b><span>${resv.length}건</span><small>예약번호 보고 포장해서 맡기기</small></button>
+      <button role="tab" aria-selected="${T==='done'}" data-ttab="done"><b>보냄 · 끝</b><span>${sent.length+done.length}건</span><small>맡긴 것, 받은 것</small></button>
+    </div>
+    ${T==='resv'?(need.length?`<p class="help tguide">칸을 누르면 복사돼요. 예약 화면 순서대로 물품명 → 받는 분 → 연락처 → 편의점(주소)을 붙여 넣으세요.</p>${need.map(resvCard).join('')}`:empty('예약할 거래가 없어요.')):''}
+    ${T==='ship'?(resv.length?`<p class="help tguide">포장하면 체크하고, 편의점에 맡기면 버튼을 눌러 주세요.</p>${resv.map(shipCard).join('')}`:empty('포장·발송할 거래가 없어요.')):''}
+    ${T==='done'?((sent.length||done.length)?`${sent.length?`<h3 class="tsec">맡긴 것 <span class="cnt">${sent.length}</span></h3>${sent.map(t=>smallCard(t,'sent')).join('')}`:''}${done.length?`<h3 class="tsec">받은 것 <span class="cnt">${done.length}</span></h3>${done.map(t=>smallCard(t,'done')).join('')}`:''}`:empty('아직 보낸 거래가 없어요.')):''}
+`;
+}
+
+function tAddBox(){return `<p class="help">주문 상세, 배송 예약 내역, 거래내역, 번개톡 대화 캡처를 찍은 순서대로 여러 장 올리면 거래별로 묶고, 대화에서 옵션(캐릭터)도 찾아 넣어요.</p>
+      <label class="drop" style="margin-top:10px;padding:22px">캡처 올리기 (여러 장)<input type="file" id="tOcr" accept="image/*" multiple></label>
+      <details style="margin-top:10px"><summary>글로 붙여 넣기</summary>
+        <p class="help" style="margin:6px 0">여러 캡처면 사이에 <b>=====</b> 줄을 넣어 주세요.</p>
+        <textarea id="tText" rows="6"></textarea>
+        <div class="row end" style="margin-top:6px"><button class="btn s p" id="tParse">글에서 읽기</button></div>
+      </details>
+      <div id="tOut" style="margin-top:8px"></div>
+      <div class="row end" style="margin-top:8px"><button class="btn s" id="tAdd">직접 한 건 추가</button></div>`;}
+function tOpenAdd(g){
+  openModal(`<div class="row between"><h2 class="t" style="font-size:20px">📷 거래 추가</h2><button class="btn s" data-close>닫기</button></div><div style="margin-top:8px">${tAddBox()}</div>`);
+  const md=document.getElementById('modal');
+  md.querySelector('#tOcr').onchange=e=>tReadImages(g,e.target.files);
+  md.querySelector('#tParse').onclick=()=>{const v0=md.querySelector('#tText').value.trim();if(!v0)return toast('글을 붙여 넣어 주세요');tApply(g,v0.split(/^\s*={3,}\s*$/m));};
+  md.querySelector('#tAdd').onclick=()=>tEdit(g,blankTrade(),true);
+}
+function tOpenSet(g){
+  openModal(`<div class="row between"><h2 class="t" style="font-size:20px">⚙️ 이 묶음 관리</h2><button class="btn s" data-close>닫기</button></div>
+    <div class="grid2" style="margin-top:10px">
+      <label class="f">묶음 이름<input id="s_title" value="${esc(g.title)}"></label>
+      <label class="f">예약할 때 복사할 물품명<input id="s_item" value="${esc(g.itemName||'')}" placeholder="비우면 '굿즈'"></label>
+    </div>
+    <label class="f" style="margin-top:8px">발송 문구 ({닉네임}, {옵션} 자리에 자동으로 들어가요)<textarea id="s_msg" rows="4">${esc(g.shipMsg||DEFAULT_SHIPMSG)}</textarea></label>
+    <label class="f" style="margin-top:8px">캐릭터 이름 목록 (대화에서 옵션 찾을 때 · 줄임말은 / 로: 하치와레/하치)<textarea id="s_opts" rows="2">${esc(g.optList==null?DEFAULT_OPTS:g.optList)}</textarea></label>
+    <label class="f" style="margin-top:8px">내 연락처 (예약 캡처에서 '보내는 사람'인 나를 빼는 데 써요)<input id="s_phone" value="${esc(S.seller.myPhone||'')}" placeholder="010-0000-0000" inputmode="tel"></label>
+    <div class="row between" style="margin-top:14px"><span class="row">${g.closed?'<button class="btn s" id="s_reopen">마감 취소</button>':'<button class="btn s" id="s_close">다 끝났어요 (지난 묶음으로)</button>'}<button class="btn s danger" id="s_del">묶음 삭제</button></span><button class="btn p" id="s_save">저장</button></div>`);
+  const md=document.getElementById('modal'), q=x=>md.querySelector(x);
+  q('#s_save').onclick=()=>{g.title=q('#s_title').value.trim()||g.title;g.itemName=q('#s_item').value.trim();g.shipMsg=q('#s_msg').value;g.optList=q('#s_opts').value;S.seller.myPhone=q('#s_phone').value.trim();md.hidden=true;save();render();toast('저장했어요');};
+  const c=q('#s_close'); if(c) c.onclick=()=>{g.closed=true;g.closedAt=now();md.hidden=true;V.gid=null;save();render();toast('지난 묶음으로 옮겼어요');};
+  const r=q('#s_reopen'); if(r) r.onclick=()=>{g.closed=false;g.closedAt='';md.hidden=true;save();render();};
+  q('#s_del').onclick=e=>{if(e.target.dataset.armed){S.groups=S.groups.filter(x=>x!==g);V.gid=null;md.hidden=true;save();render();}else{e.target.dataset.armed='1';e.target.textContent='정말 삭제? (다시 누르기)';}};
+}
+async function tReadImages(g,files){
+  if(!canFetch()){toast('사진 글자 읽기는 사이트에 올린 뒤 구글 OCR로 동작합니다. 지금은 "글로 붙여 넣기"를 써 주세요');return;}
+  if(!V.adminKey){toast('공구 설정 → 연동에 관리자 비밀번호를 먼저 넣어 주세요');return;}
+  const list=Array.from(files||[]).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true})||a.lastModified-b.lastModified);
+  if(!list.length) return; const out=document.getElementById('tOut'); const texts=new Array(list.length).fill(''); let done=0, fail=0;
+  const show=()=>{if(out)out.innerHTML=`<div class="band">사진 읽는 중… ${done}/${list.length}</div>`;}; show();
+  let next=0; const worker=async()=>{while(next<list.length){const i=next++;try{const data=await shrink(list[i],2000,.9);const r=await fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,ocr:data})});const j=await r.json();if(j&&j.text)texts[i]=j.text;else fail++;}catch(e){fail++;}done++;show();}};
+  await Promise.all([worker(),worker(),worker()]);
+  tApply(g,texts,fail?`${fail}장은 읽지 못했어요.`:'');
+}
+function tChatTrade(g,tx){const c=(g.trades||[]).filter(t=>t.nick&&tx.includes(t.nick)).sort((a,b)=>b.nick.length-a.nick.length);if(c.length)return c[0];const r=(g.trades||[]).filter(t=>t.rName&&t.rName.length>=2&&tx.includes(t.rName));return r.length===1?r[0]:null;}
+function tApply(g,texts,extra){
+  g.trades=g.trades||[]; const list=tOptList(g); const chats=[];
+  const frags=[];texts.forEach(tx=>{if(!tx||!tx.trim())return;
+    const isChat=/번개톡|메시지를?\s*입력|대화/.test(tx)&&!/주문\s*번호|예약\s*번호|상품\s*금액|\/\s*택배\s*거래/.test(tx);
+    if(isChat){chats.push(tx);return;} frags.push(...tParse(tx,tMine()));});
+  const r=tMerge(g.trades,frags,blankTrade);
+  let oDone=0,oMiss=0; chats.forEach(tx=>{const t=tChatTrade(g,tx);const o=tExtractOpts(tx,list);if(t&&o.length){if(!t.option||t.optGuess){t.option=tOptText(o);t.optGuess=true;}oDone++;}else oMiss++;});
+  if(chats.length) extra=[extra,`대화 ${chats.length}개 중 옵션 넣음 ${oDone}개${oMiss?` · 거래를 못 찾은 대화 ${oMiss}개 (카드의 "대화로 넣기"로 넣어 주세요)`:''}`].filter(Boolean).join(' · ');
+  save();render();
+  const out=document.getElementById('tOut');
+  if(out) out.innerHTML=`<div class="band">${texts.length}개 읽음 → 새 거래 ${r.added}건, 정보 보탠 거래 ${Math.max(0,r.updated-r.added)}건${r.loose?` · 어디에도 못 붙인 조각 ${r.loose}개`:''}${extra?' · '+extra:''}</div>`;
+  toast(frags.length?`새 거래 ${r.added}건 · 업데이트 ${Math.max(0,r.updated-r.added)}건`:`옵션 넣은 거래 ${oDone}건`);
+}
+function tEdit(g,t,isNew){
+  const F=[['nick','구매자 닉네임'],['orderNo','주문번호'],['orderAt','주문 일시'],['method','거래방법 (구매자 선택)'],['item','상품명'],['price','상품금액','n'],['ship','배송비','n'],['fee','판매 수수료','n'],['payout','입금 예정 금액','n'],['rName','받는 분'],['rPhone','연락처'],['cvs','도착 편의점 (반값택배)'],['cvsAddr','편의점 주소'],['zip','우편번호'],['addr','주소'],['addr2','상세주소'],['memo','요청사항'],['resvService','예약 서비스'],['resvNo','예약번호'],['resvUntil','예약 유효기간 (예: 11월 18일 (수))'],['option','옵션 (보낼 캐릭터)'],['plan','발송 예정 (예: 다음주 수요일)'],['tracking','운송장 번호'],['note','내 메모']];
+  const others=(g.trades||[]).filter(x=>x!==t);
+  openModal(`<div class="row between"><h2 class="t" style="font-size:19px">${isNew?'거래 추가':'거래 수정'}</h2><button class="btn s" data-close>닫기</button></div>
+    <div class="grid2" style="margin-top:8px">${F.map(([k,l,ty])=>`<label class="f">${esc(l)}<input data-tf="${k}" ${ty==='n'?'inputmode="numeric"':''} value="${esc(t[k]||(ty==='n'?'':''))}"></label>`).join('')}</div>
+    <label class="sw" style="margin-top:8px"><input type="checkbox" id="tf_safe" ${t.safe?'checked':''}> 안심번호</label>
+    ${(t.resvAlt||[]).length?`<label class="f" style="margin-top:8px">다른 예약번호 (쉼표로 구분)<input id="tf_alt" value="${esc((t.resvAlt||[]).join(', '))}"></label>`:''}
+    ${others.length&&!isNew?`<div class="grp" style="margin-top:12px"><div class="grp-h">다른 거래와 합치기</div><p class="help">같은 거래가 두 장으로 나뉘었으면 고르세요. 이 거래의 내용이 고른 거래의 빈 칸으로 들어가고, 이 카드는 없어집니다.</p><div class="row" style="margin-top:6px"><select id="tf_into" style="flex:1"><option value="">합칠 거래 고르기</option>${others.map(o=>`<option value="${o.id}">${esc(o.nick||o.rName||o.resvNo||'(이름 없음)')} · ${esc(o.item?o.item.slice(0,18):'')}</option>`).join('')}</select><button class="btn s" id="tf_merge">합치기</button></div></div>`:''}
+    <div class="row end" style="margin-top:12px"><button class="btn" data-close>취소</button><button class="btn p" id="tf_save">저장</button></div>`);
+  const md=document.getElementById('modal');
+  md.querySelector('#tf_save').onclick=()=>{md.querySelectorAll('[data-tf]').forEach(i=>{const k=i.dataset.tf;t[k]=['price','ship','fee','payout'].includes(k)?tNum(i.value):i.value.trim();});
+    t.safe=md.querySelector('#tf_safe').checked; const alt=md.querySelector('#tf_alt'); if(alt)t.resvAlt=alt.value.split(',').map(x=>x.trim()).filter(Boolean);
+    if(t.resvNo&&(t.status||'need')==='need')t.status='reserved'; delete t.guess;
+    if(isNew&&!(g.trades||[]).includes(t))g.trades.push(t);
+    md.hidden=true;save();render();toast('저장했어요');};
+  const mg=md.querySelector('#tf_merge'); if(mg) mg.onclick=()=>{const id=md.querySelector('#tf_into').value;const b=(g.trades||[]).find(x=>x.id===id);if(!b){toast('합칠 거래를 골라 주세요');return;}tAbsorb(b,t);g.trades=g.trades.filter(x=>x!==t);md.hidden=true;save();render();toast('두 거래를 합쳤어요');};
+}
+function tOpt(g,t){
+  const list=tOptList(g);
+  openModal(`<div class="row between"><h2 class="t" style="font-size:20px">옵션 넣기 · ${esc(t.nick||t.rName||'')}</h2><button class="btn s" data-close>닫기</button></div>
+    <p class="help" style="margin:6px 0 10px">번개톡 대화를 붙여 넣거나 대화 캡처를 올리면 캐릭터 이름과 개수를 찾아요. 아래 칸에서 확인하고 고친 뒤 저장하세요.</p>
+    <textarea id="o_chat" rows="7" placeholder="예) 안녕하세요! 우사기 1개랑 하치와레 1개로 부탁드려요"></textarea>
+    <label class="drop" style="margin-top:8px">대화 캡처로 읽기 (여러 장)<input type="file" id="o_img" accept="image/*" multiple></label>
+    <label class="f" style="margin-top:12px">옵션 (보낼 캐릭터 · 개수)<input id="o_val" value="${esc(t.option||'')}" placeholder="예) 우사기 1 · 하치와레 1" style="font-size:18px;font-weight:700"></label>
+    <p class="help" id="o_hint" style="margin-top:4px">찾는 이름: ${list.map(o=>esc(o.name)).join(', ')} · 목록은 설정에서 바꿀 수 있어요</p>
+    <div class="row end" style="margin-top:12px"><button class="btn" data-close>취소</button><button class="btn p" id="o_save">저장</button></div>`);
+  const md=document.getElementById('modal'), ta=md.querySelector('#o_chat'), val=md.querySelector('#o_val'), hint=md.querySelector('#o_hint');
+  const run=()=>{const o=tExtractOpts(ta.value,list);if(o.length){val.value=tOptText(o);hint.textContent='대화에서 찾았어요: '+tOptText(o)+' — 다르면 고쳐 주세요';}else if(ta.value.trim()){hint.textContent='목록에 있는 이름을 못 찾았어요. 직접 적어 주세요.';}};
+  ta.oninput=run;
+  md.querySelector('#o_img').onchange=async e=>{const fs=Array.from(e.target.files||[]).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));if(!fs.length)return;
+    if(!canFetch()){toast('사진 글자 읽기는 사이트에 올린 뒤 동작합니다. 대화를 복사해 붙여 넣어 주세요');return;}
+    if(!V.adminKey){toast('폼 모집 공구 → 설정 → 연동에 관리자 비밀번호를 먼저 넣어 주세요');return;}
+    hint.textContent='대화 캡처 읽는 중…';
+    for(const f of fs){try{const data=await shrink(f,2000,.9);const r=await fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,ocr:data})});const j=await r.json();if(j&&j.text)ta.value=(ta.value?ta.value+'\n':'')+j.text;}catch(err){}}
+    run();};
+  md.querySelector('#o_save').onclick=()=>{t.option=val.value.trim();delete t.optGuess;md.hidden=true;save();render();toast(t.option?'옵션 저장: '+t.option:'옵션을 비웠어요');};
+}
+function bindTrade(g){
+  ['tAddBtn','tAddBtn2'].forEach(id=>{const b=document.getElementById(id);if(b)b.onclick=()=>tOpenAdd(g);});
+  const sb=document.getElementById('tSetBtn'); if(sb) sb.onclick=()=>tOpenSet(g);
+  document.querySelectorAll('[data-topt]').forEach(b=>b.onclick=()=>{const t=g.trades.find(x=>x.id===b.dataset.topt);if(t)tOpt(g,t);});
+  const ol=document.getElementById('tOptList'); if(ol) ol.onchange=()=>{g.optList=ol.value;save();toast('옵션 목록 저장');};
+  g.trades=g.trades||[];
+  const fi=document.getElementById('tOcr'); if(fi) fi.onchange=()=>tReadImages(g,fi.files);
+  const tp=document.getElementById('tParse'); if(tp) tp.onclick=()=>{const v0=v('tText');if(!v0)return toast('글을 붙여 넣어 주세요');tApply(g,v0.split(/^\s*={3,}\s*$/m));};
+  const ta=document.getElementById('tAdd'); if(ta) ta.onclick=()=>tEdit(g,blankTrade(),true);
+  document.querySelectorAll('[data-tgo]').forEach(b=>b.onclick=()=>{const [id,st]=b.dataset.tgo.split(':');const t=g.trades.find(x=>x.id===id);if(!t)return;if(st==='sent'){t.status=st;save();render();copyText(tShipMsg(g,t),'보냄으로 옮겼어요 · 발송 문구 복사');return;}
+    t.status=st;save();render();toast({reserved:'포장·발송 탭으로 옮겼어요',sent:'보냄으로 옮겼어요',done:'받음 확인'}[st]||'되돌렸어요');});
+  document.querySelectorAll('[data-ttab]').forEach(b=>b.onclick=()=>{V.tTab=b.dataset.ttab;saveView();render();});
+  document.querySelectorAll('[data-tpack]').forEach(c=>c.onchange=()=>{const t=g.trades.find(x=>x.id===c.dataset.tpack);if(t){t.packed=c.checked;save();render();}});
+  document.querySelectorAll('[data-tpick]').forEach(b=>b.onclick=()=>{const [id,no]=b.dataset.tpick.split(':');const t=g.trades.find(x=>x.id===id);if(t){tPick(t,no);save();render();toast(no+' 로 보내요');}});
+  
+  document.querySelectorAll('[data-tstat]').forEach(s=>s.onchange=()=>{const t=g.trades.find(x=>x.id===s.dataset.tstat);if(t){t.status=s.value;save();render();}});
+  document.querySelectorAll('[data-tedit]').forEach(b=>b.onclick=()=>{const t=g.trades.find(x=>x.id===b.dataset.tedit);if(t)tEdit(g,t,false);});
+  document.querySelectorAll('[data-tdel]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){g.trades=g.trades.filter(x=>x.id!==b.dataset.tdel);save();render();}else{b.dataset.armed='1';b.textContent='정말 삭제?';}});
+  const tt=document.getElementById('tTitle'); if(tt) tt.onchange=()=>{g.title=tt.value.trim()||g.title;save();render();};
+  const tn=document.getElementById('tItemName'); if(tn) tn.onchange=()=>{g.itemName=tn.value.trim();save();render();toast('기본 물품명 저장');};
+  const tm=document.getElementById('tMyPhone'); if(tm) tm.onchange=()=>{S.seller.myPhone=tm.value.trim();save();toast('내 연락처 저장');};
+  const dg=document.getElementById('tDelG'); if(dg) dg.onclick=e=>{if(e.target.dataset.armed){S.groups=S.groups.filter(x=>x!==g);V.gid=S.groups[0]?.id;save();render();}else{e.target.dataset.armed='1';e.target.textContent='정말 삭제? (다시 누르기)';}};
 }
 
 /* 구글 시트 연동: 관리자는 비밀번호로 전체 저장·불러오기, 참여자는 자기 아이디로 자기 것만 */
