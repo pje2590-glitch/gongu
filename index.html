@@ -18,6 +18,14 @@
 <meta name="twitter:card" content="summary_large_image">
 
 <style>html{color-scheme:light dark}body{margin:0;font-size:14px;font-family:system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}.loadcard{text-align:center;padding:34px 18px}.loadcard .spin{width:34px;height:34px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--ok-bg);border-top-color:var(--ok);animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 한글이 한 글자씩 잘려 줄바꿈되지 않게 — 단어 단위로 넘기기 */
+html,body{word-break:keep-all;overflow-wrap:break-word}
+h1,h2,h3,.t,.brand,.hd b,.nm,b{text-wrap:balance}
+p,.help,.q,dd,span{text-wrap:pretty}
+.num,.amt,.pill,.brand small{white-space:nowrap}
+
+.fitme,.line>span:first-child,.line.item .nm,.line.item .q{min-width:0;overflow:hidden}
 </style>
 <title>직구 공구 정산서</title>
 
@@ -852,7 +860,7 @@ function renderMember(g){
           <div class="hd"><b>2차 정산 · 배송비</b>${!g.stage2Open?`<span class="pill">준비 중</span>`:''}</div>
           ${g.stage2Open&&!hasAddr(m)?`<div class="closed">2차 금액은 <b>배송 방법</b>(일반택배 4,000원 / 편의점택배 2,500원)에 따라 달라져요.<br>먼저 배송지 입력에서 배송 방법을 골라 주세요.<div style="margin-top:10px"><button class="btn p" data-tab="m:addr">배송 방법 고르러 가기</button></div></div>`
           :g.stage2Open?`
-          ${isFeeG(g)&&!(+m.overseas)?`<div class="line sub"><span>해외배송비 <span class="q">매장 직접 구매 공구 · 수고비로 대신해 해외배송비가 없어요</span></span><span class="num">없음</span></div>`
+          ${isFeeG(g)&&!(+m.overseas)?`<div class="line sub"><span>해외배송비</span><span class="num">없음</span></div>`
           :`<div class="line item"><span><span class="nm">해외배송비</span><span class="q">${cartName(g,m.cart||0)||'배대지 → 한국'}</span></span><span class="num">${(+m.overseas||0).toLocaleString('ko-KR')}원</span></div>`}
           <div class="line item"><span><span class="nm">국내배송비</span><span class="q">${esc(dom(m).t)}</span></span><span class="num">${dom(m).fee.toLocaleString('ko-KR')}원</span></div>
           <div class="line total"><span>2차 합계</span><span class="num">${won(s2(m))}</span></div>
@@ -1983,6 +1991,23 @@ BOOT.finally(()=>{ if(!personal&&!formView){ addDemoIfNeeded(); tryImportSeed();
 fetchRates();
 window.addEventListener('hashchange',()=>{readHash();render();});
 render();
+
+/* 한 줄 맞춤: 넘치면 자간 → 글자 크기 순으로 줄여서 한 줄에 넣기. 너무 길면(70% 이하) 그때만 단어 단위로 줄바꿈 */
+const FIT_SEL='.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
+function fitOne(el){
+  const st=el.style; st.letterSpacing='';st.fontSize='';st.whiteSpace='nowrap';
+  if(el.scrollWidth<=el.clientWidth+1) return;
+  for(const ls of [-.02,-.04,-.06]){ st.letterSpacing=ls+'em'; if(el.scrollWidth<=el.clientWidth+1) return; }
+  const base=parseFloat(getComputedStyle(el).fontSize);
+  for(let k=.96;k>=.7;k-=.03){ st.fontSize=(base*k).toFixed(2)+'px'; if(el.scrollWidth<=el.clientWidth+1) return; }
+  st.fontSize='';st.letterSpacing='-.02em';st.whiteSpace='';
+}
+let fitRaf=0;
+function fitAll(){ cancelAnimationFrame(fitRaf); fitRaf=requestAnimationFrame(()=>{ document.querySelectorAll(FIT_SEL).forEach(el=>{ if(el.offsetParent!==null) fitOne(el); }); }); }
+new MutationObserver(fitAll).observe(document.body,{childList:true,subtree:true});
+window.addEventListener('resize',fitAll);
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitAll);
+document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 </script>
 
 </body>

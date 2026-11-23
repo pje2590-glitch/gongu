@@ -48,6 +48,12 @@ tfoot td{font-weight:700}
 .row{display:flex;justify-content:space-between;gap:10px}
 .reset{display:block;margin:18px auto 0;border:1px solid var(--line);background:var(--card);color:var(--muted);font:inherit;font-size:13px;padding:8px 14px;border-radius:9px}
 .th{width:56px;height:56px;border-radius:10px;object-fit:cover;flex:none;background:#fff;border:1px solid #DFE2F2}.it.on .th{opacity:.3;filter:grayscale(1)}
+
+/* 한글이 한 글자씩 잘려 줄바꿈되지 않게 — 단어 단위로 넘기기 */
+html,body{word-break:keep-all;overflow-wrap:break-word}
+h1,h2,h3,.t,.brand,.hd b,.nm,b{text-wrap:balance}
+p,.help,.q,dd,span{text-wrap:pretty}
+.num,.amt,.pill{white-space:nowrap}
 </style>
 </head>
 <body>
