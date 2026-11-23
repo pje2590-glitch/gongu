@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>직구 공구 정산서</title>
 <meta property="og:title" content="직구 공구 정산서">
 <meta property="og:description" content="공구 정산서 · 모집폼 · 배송지 입력">
@@ -29,7 +29,6 @@ p,.help,.q,dd,span{text-wrap:pretty}
 
 /* 옆으로 삐져나가거나 화면이 튕기지 않게 */
 html,body{max-width:100%;overflow-x:hidden;overscroll-behavior:none}
-html{touch-action:pan-y}
 .top .brand{min-width:0;max-width:100%;overflow:hidden}
 .brand:not(:has(.logo)){display:block}
 .brand:not(:has(.logo)) small{margin-top:4px}
@@ -473,9 +472,17 @@ pre.tmsg{margin-top:10px;font-size:14px}
 .landing-hi{text-align:center;font-family:var(--title);font-size:22px;color:var(--muted);margin-top:22px}
 .kv{display:grid;grid-template-columns:76px 1fr;gap:4px 12px;font-size:14px;margin:0}
 .kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;word-break:break-word}
+
+/* 화면 고정: 위아래·양옆 튕김, 확대 막기. 스크롤은 안쪽 #scroller에서만 */
+html,body{height:100%;overflow:hidden!important;overscroll-behavior:none}
+html{touch-action:manipulation!important}
+body{position:fixed;inset:0;width:100%}
+body{padding:0!important}
+#scroller{position:absolute;inset:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:calc(env(safe-area-inset-top,0px) + 26px);padding-bottom:40px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:none}
+.secsw>button{min-width:0;overflow:hidden}
 </style>
 </head>
-<body>
+<body><div id="scroller">
 <div class="wrap" id="app"></div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
@@ -1377,7 +1384,7 @@ function bind(){
   app.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyText(b.dataset.copy,b.dataset.label));
   app.querySelectorAll('[data-copy-el]').forEach(b=>b.onclick=()=>copyText(document.getElementById(b.dataset.copyEl).textContent,b.dataset.label));
   const ag=document.getElementById('addG'); if(ag) ag.onclick=addGroup;
-  app.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{V.section=b.dataset.section;const f=S.groups.find(x=>(V.section==='trade')===(x.kind==='trade')&&!x.closed);V.gid=f?f.id:null;V.mid=null;saveView();render();window.scrollTo(0,0);});
+  app.querySelectorAll('[data-section]').forEach(b=>b.onclick=()=>{V.section=b.dataset.section;const f=S.groups.find(x=>(V.section==='trade')===(x.kind==='trade')&&!x.closed);V.gid=f?f.id:null;V.mid=null;saveView();render();document.getElementById('scroller').scrollTop=0;});
   const sg=document.getElementById('seedGo'); if(sg) sg.onclick=async()=>{const pw=v('seedPw');if(!pw)return toast('비밀번호를 넣어 주세요');sg.disabled=true;const ok=await tryImportSeed(pw,true);sg.disabled=false;if(ok){V.adminKey=pw;saveView();syncPush();}};
   const hm=app.querySelector('[data-home]'); if(hm) hm.onclick=()=>{V.section=null;saveView();render();};
   if(!g) return;
@@ -2011,7 +2018,7 @@ window.addEventListener('hashchange',()=>{readHash();render();});
 render();
 
 /* 한 줄 맞춤: 넘치면 자간 → 글자 크기 순으로 줄여서 한 줄에 넣기. 너무 길면(70% 이하) 그때만 단어 단위로 줄바꿈 */
-const FIT_SEL='.tabs>[role=tab],.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
+const FIT_SEL='.secsw>button,.chips>button,.tabs>[role=tab],.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
 function fitOne(el){
   const st=el.style; st.letterSpacing='';st.fontSize='';st.whiteSpace='nowrap';
   if(el.scrollWidth<=el.clientWidth+1) return;
@@ -2026,7 +2033,11 @@ new MutationObserver(fitAll).observe(document.body,{childList:true,subtree:true}
 window.addEventListener('resize',fitAll);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitAll);
 document.addEventListener('click',()=>setTimeout(fitAll,30),true);
+
+/* 두 손가락 확대·더블탭 확대 막기 */
+['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
+document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
 </script>
 
-</body>
+</div></body>
 </html>
