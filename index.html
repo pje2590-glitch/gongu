@@ -488,7 +488,7 @@ body{padding:0!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.24-①</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.24-②</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -2023,7 +2023,7 @@ window.addEventListener('hashchange',()=>{readHash();render();});
 render();
 
 /* 한 줄 맞춤: 넘치면 자간 → 글자 크기 순으로 줄여서 한 줄에 넣기. 너무 길면(70% 이하) 그때만 단어 단위로 줄바꿈 */
-const FIT_SEL='.secsw>button,.chips>button,.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
+const FIT_SEL='.secsw>button,.chips>button,.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
 function fitOne(el){
   const st=el.style; st.letterSpacing='';st.fontSize='';st.whiteSpace='nowrap';
   if(el.scrollWidth<=el.clientWidth+1) return;
