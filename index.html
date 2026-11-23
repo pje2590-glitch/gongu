@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>직구 공구 정산서</title>
 <meta property="og:title" content="직구 공구 정산서">
 <meta property="og:description" content="공구 정산서 · 모집폼 · 배송지 입력">
@@ -26,6 +26,15 @@ p,.help,.q,dd,span{text-wrap:pretty}
 .num,.amt,.pill,.brand small{white-space:nowrap}
 
 .fitme,.line>span:first-child,.line.item .nm,.line.item .q{min-width:0;overflow:hidden}
+
+/* 옆으로 삐져나가거나 화면이 튕기지 않게 */
+html,body{max-width:100%;overflow-x:hidden;overscroll-behavior:none}
+html{touch-action:pan-y}
+.top .brand{min-width:0;max-width:100%;overflow:hidden}
+.brand:not(:has(.logo)){display:block}
+.brand:not(:has(.logo)) small{margin-top:4px}
+.tabs{flex-wrap:nowrap!important}.tabs>[role=tab]{min-width:0;flex:1 1 auto;overflow:hidden}
+#syncBadge{position:fixed;left:12px;bottom:12px;z-index:50;padding:6px 11px;border-radius:999px;font-size:12px;font-weight:700;background:var(--card);color:var(--muted);border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.08);transition:opacity .4s}#syncBadge.ok{color:var(--ok)}#syncBadge.bad{color:var(--bad);border-color:var(--bad)}#syncBadge.hide{opacity:0;pointer-events:none}
 </style>
 <title>직구 공구 정산서</title>
 
@@ -841,7 +850,7 @@ function renderMember(g){
           <div class="hd"><b>1차 정산 · 현지 상품 금액</b></div>
           ${m.items.map(i=>`<div class="line item"><span><span class="nm">${esc(i.n)}</span><span class="q">${i.q}개${i.fx?' · '+esc(fxNote(g,i)):''}${+i.fee?' · 수고비 '+(+i.fee).toLocaleString('ko-KR')+'원':''}</span></span><span class="num">${(i.q*(i.p+(+i.fee||0))).toLocaleString('ko-KR')}원</span></div>`).join('')}
           <div class="line sub"><span>적용 환율</span><span class="num">${sym1(g)}1 = ${g.rate}원</span></div>
-          ${feeSum(m)?`<div class="line sub"><span>수고비 포함 <span class="q">매장 직접 구매 · 해외배송비 없음</span></span><span class="num">${feeSum(m).toLocaleString('ko-KR')}원</span></div>`:''}
+          ${feeSum(m)?`<div class="line sub"><span>수고비</span><span class="num">${feeSum(m).toLocaleString('ko-KR')}원</span></div>`:''}
           <div class="line total"><span>1차 합계</span><span class="num">${won(s1(m))}</span></div>
           <div class="line sub"><span>받은 금액</span><span class="num">-${(m.paid1||0).toLocaleString('ko-KR')}원</span></div>
         </div>
@@ -1958,7 +1967,14 @@ function addDemoIfNeeded(){ try{if(localStorage.getItem(DEMO_FLAG)==='1')return;
 if(MIGRATED){setTimeout(()=>{try{save();}catch(e){}},800);}
 const canFetch=()=>!!(S.seller&&S.seller.syncUrl)&&!(window.claude&&window.claude.use);
 let syncTimer=null;
-function syncPush(){ if(!canFetch()||!V.adminKey||personal) return; clearTimeout(syncTimer); syncTimer=setTimeout(()=>{try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,state:Object.assign({},S,{groups:S.groups.filter(x=>!x.demo)})})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('시트 저장 실패: '+j.error);}).catch(()=>{});}catch(e){}},800); }
+/* 관리자 변경 → 구글 시트 저장. 저장이 끝나기 전에 창을 닫거나 새로고침해도 다음에 열 때 이어서 올려요 */
+const DIRTY=KEY+'-dirty'; let syncBusy=false, syncAgain=false;
+function syncBadge(t,cls){ let el=document.getElementById('syncBadge'); if(!el){el=document.createElement('div');el.id='syncBadge';document.body.appendChild(el);} el.textContent=t; el.className=cls||''; clearTimeout(el._h); if(cls==='ok') el._h=setTimeout(()=>{el.className='hide';},1800); }
+function syncPush(){ if(!canFetch()||!V.adminKey||personal||formView) return; try{localStorage.setItem(DIRTY,String(Date.now()));}catch(e){} syncBadge('☁️ 저장 중…','busy'); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,250); }
+function syncNow(){ if(syncBusy){syncAgain=true;return;} syncBusy=true; syncAgain=false;
+  const done=(ok,msg)=>{ syncBusy=false; if(syncAgain){syncNow();return;} if(ok){ try{localStorage.removeItem(DIRTY);}catch(e){} syncBadge('✓ 시트에 저장됨','ok'); } else { syncBadge('⚠️ 저장 실패 · 다시 시도 중','bad'); toast('시트 저장 실패'+(msg?': '+msg:'')+' — 30초 뒤 다시 시도해요'); setTimeout(()=>{ if(localStorage.getItem(DIRTY)) syncNow(); },30000); } };
+  try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,state:Object.assign({},S,{groups:S.groups.filter(x=>!x.demo)})})}).then(r=>r.json()).then(j=>done(!(j&&j.error),j&&j.error)).catch(()=>done(false,'연결 끊김'));}catch(e){done(false);} }
+window.addEventListener('beforeunload',e=>{ if(syncBusy||localStorage.getItem(DIRTY)&&syncTimer){ e.preventDefault(); e.returnValue=''; } });
 function pushResponse(g,r){ try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({form:g.id,response:r})}).then(x=>x.json()).then(j=>{if(j&&j.closed&&j.error){g.form.open=false;g.form.responses=g.form.responses.filter(x=>x.id!==r.id);V.formDone=null;saveView();render();toast('방금 마감되어 신청이 접수되지 않았어요');}else if(j&&j.error)toast('신청 전달 실패: '+j.error);else if(j&&j.closed){g.form.open=false;render();}}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
 async function refreshFormStatus(g){ if(!canFetch()) return; try{const r=await fetch(S.seller.syncUrl+'?form='+encodeURIComponent(g.id)); const j=await r.json(); if(j&&j.group&&j.group.form){const wasOpen=formOpen(g); g.form.open=!!j.group.form.open; g.form.responses=j.group.form.responses||g.form.responses; if(wasOpen!==formOpen(g)) render();}}catch(e){} }
 setInterval(()=>{ if(formView){const g=S.groups.find(x=>x.id===formView); if(g&&formOpen(g)) refreshFormStatus(g);} },15000);
@@ -1983,6 +1999,8 @@ const BOOT=(async()=>{
       else if(j&&(j.error||!j.group)){ try{localStorage.removeItem(CK());}catch(e){} if(cached&&cached.group){S.groups=[];} }
       render(); return;
     }
+    const dAge=Date.now()-(+localStorage.getItem(DIRTY)||0); if(localStorage.getItem(DIRTY)&&dAge>=10*60*1000){ try{localStorage.removeItem(DIRTY);}catch(e){} }
+    if(V.adminKey&&localStorage.getItem(DIRTY)&&dAge<10*60*1000){ toast('저장 안 끝난 변경사항을 시트에 올리고 있어요'); syncBadge('☁️ 저장 중…','busy'); syncNow(); return; }
     if(V.adminKey){ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json();
       if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=g.members.map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} render(); toast('구글 시트에서 불러왔어요'); } else if(j&&j.error){ toast('시트 불러오기 실패: '+j.error); } }
   }catch(e){ if(LOADING){ LOADING=false; LOADFAIL=true; render(); } }
@@ -1993,7 +2011,7 @@ window.addEventListener('hashchange',()=>{readHash();render();});
 render();
 
 /* 한 줄 맞춤: 넘치면 자간 → 글자 크기 순으로 줄여서 한 줄에 넣기. 너무 길면(70% 이하) 그때만 단어 단위로 줄바꿈 */
-const FIT_SEL='.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
+const FIT_SEL='.tabs>[role=tab],.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
 function fitOne(el){
   const st=el.style; st.letterSpacing='';st.fontSize='';st.whiteSpace='nowrap';
   if(el.scrollWidth<=el.clientWidth+1) return;

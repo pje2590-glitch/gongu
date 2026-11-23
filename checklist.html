@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#9FA9D8">
 <title>치이카와 크리스마스 마켓 구매 체크리스트</title>
@@ -54,6 +54,12 @@ html,body{word-break:keep-all;overflow-wrap:break-word}
 h1,h2,h3,.t,.brand,.hd b,.nm,b{text-wrap:balance}
 p,.help,.q,dd,span{text-wrap:pretty}
 .num,.amt,.pill{white-space:nowrap}
+
+.fitme,.line>span:first-child,.line.item .nm,.line.item .q{min-width:0;overflow:hidden}
+
+/* 옆으로 삐져나가거나 화면이 튕기지 않게 */
+html,body{max-width:100%;overflow-x:hidden;overscroll-behavior:none}
+html{touch-action:pan-y}
 </style>
 </head>
 <body>
@@ -111,6 +117,7 @@ function render(){
 }
 document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{T=b.dataset.t;save();render();window.scrollTo(0,0);});
 render();
+
 </script>
 </body>
 </html>
