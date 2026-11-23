@@ -684,7 +684,10 @@ const formWaiting=g=>!!(g.form&&g.form.open&&g.form.openAt)&&new Date(g.form.ope
 const formOpen=g=>!!(g.form&&g.form.open)&&!formWaiting(g)&&!formExpired(g)&&!g.closed;
 const fmtOpenAt=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
 const cartName=(g,ci)=>g.carts.length>1?`${ci+1}번 장바구니`:'';
+const addrDuePast=g=>!!g.addrDue&&Date.now()>new Date(g.addrDue+'T23:59:59+09:00').getTime();
+const dueTxt=d=>{const x=new Date(d+'T12:00:00+09:00');return (x.getMonth()+1)+'/'+x.getDate()+'('+'일월화수목금토'[x.getDay()]+')';};
 const hasAddr=m=>m.delivery==='convenience'?!!m.cvs:!!m.addr;
+const dlvLocked=(g,m)=>!!((g.stage2Open&&hasAddr(m))||(+m.paid2>0));
 const addrText=m=>m.delivery==='convenience'?`${m.cvs||''}`:(m.zip?'['+m.zip+'] ':'')+fullAddr(m);
 const fmtDate=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일`;};
 const fmtDT=iso=>{const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
@@ -847,7 +850,8 @@ function renderMember(g){
         ${head('2차 정산서')}
         <div class="stage">
           <div class="hd"><b>2차 정산 · 배송비</b>${!g.stage2Open?`<span class="pill">준비 중</span>`:''}</div>
-          ${g.stage2Open?`
+          ${g.stage2Open&&!hasAddr(m)?`<div class="closed">2차 금액은 <b>배송 방법</b>(일반택배 4,000원 / 편의점택배 2,500원)에 따라 달라져요.<br>먼저 배송지 입력에서 배송 방법을 골라 주세요.<div style="margin-top:10px"><button class="btn p" data-tab="m:addr">배송 방법 고르러 가기</button></div></div>`
+          :g.stage2Open?`
           ${isFeeG(g)&&!(+m.overseas)?`<div class="line sub"><span>해외배송비 <span class="q">매장 직접 구매 공구 · 수고비로 대신해 해외배송비가 없어요</span></span><span class="num">없음</span></div>`
           :`<div class="line item"><span><span class="nm">해외배송비</span><span class="q">${cartName(g,m.cart||0)||'배대지 → 한국'}</span></span><span class="num">${(+m.overseas||0).toLocaleString('ko-KR')}원</span></div>`}
           <div class="line item"><span><span class="nm">국내배송비</span><span class="q">${esc(dom(m).t)}</span></span><span class="num">${dom(m).fee.toLocaleString('ko-KR')}원</span></div>
@@ -856,9 +860,9 @@ function renderMember(g){
           :isFeeG(g)?`<div class="closed">매장 직접 구매 공구라 해외배송비는 없어요. 2차에서는 국내배송비만 정산되며, 준비되면 따로 안내드릴게요.</div>`
           :`<div class="closed">해외배송비는 배대지 입고 후 확정됩니다. 확정되면 여기에 금액이 뜨고 따로 안내드릴게요.</div>`}
         </div>
-        ${g.stage2Open?`${rem2?`<div class="grand due"><span>2차 보내실 금액</span><span class="num">${won(rem2)}</span></div>`:`<div class="grand paid"><span>2차 입금이 확인되었습니다</span><span>💛</span></div>`}`:''}
+        ${g.stage2Open&&hasAddr(m)?`${rem2?`<div class="grand due"><span>2차 보내실 금액</span><span class="num">${won(rem2)}</span></div>`:`<div class="grand paid"><span>2차 입금이 확인되었습니다</span><span>💛</span></div>`}`:''}
         ${notice}
-        ${g.stage2Open?acctBlock(rem2,m.name):''}
+        ${g.stage2Open&&hasAddr(m)?acctBlock(rem2,m.name):''}
       </div>
       <div class="row">${proofBtn}${g.stage2Open?`<button class="btn" data-saveimg="receiptEl2" data-title="2차정산서">💾 이미지로 저장</button>`:''}</div>
       <p class="help keep">공구가 마무리되면 이 정산서는 더 이상 열리지 않아요. 보관하시려면 💾 이미지로 저장하거나 화면을 캡처해 두세요.</p>
@@ -873,22 +877,29 @@ function renderMember(g){
     <div ${T!=='addr'?'hidden':''} class="panel">
       <div class="card">
         <h2>배송지 입력</h2>
-        ${addrOk?`<dl class="kv"><dt>배송 방법</dt><dd>${dpill(m)} ${dom(m).fee.toLocaleString('ko-KR')}원</dd><dt>받는 분</dt><dd><b>${esc(m.name)}</b> · ${esc(m.phone)}</dd>${m.delivery==='convenience'?`<dt>수령 편의점</dt><dd>${esc(m.cvs)}</dd>`:`<dt>주소</dt><dd>${m.zip?'['+esc(m.zip)+'] ':''}${esc(fullAddr(m))}</dd>`}${m.memo?`<dt>요청사항</dt><dd>${esc(m.memo)}</dd>`:''}</dl>
-          <div class="row end" style="margin-top:8px"><button class="btn s" id="editAddr">배송지 수정</button></div>`
+        ${(()=>{const past=addrDuePast(g), lock=dlvLocked(g,m);
+          const info=[];
+          if(g.addrDue) info.push(past?`⏰ 배송지 수정 기한(${dueTxt(g.addrDue)})이 지났어요.${addrOk?' 바꿔야 하면 '+esc(nickOf(g))+'에게 직접 연락해 주세요.':''}`:`⏰ 배송지는 <b>${dueTxt(g.addrDue)}까지</b> 수정할 수 있어요.`);
+          if(lock) info.push(`🔒 배송 방법은 2차 정산 금액에 들어가서 <b>바꿀 수 없어요</b>.`);
+          else if(g.stage2Open) info.push(`⚠️ 저장하면 <b>배송 방법은 바꿀 수 없어요</b> (2차 금액이 정해져요).`);
+          return info.length?`<div class="band" style="background:var(--soft);color:var(--ink);margin-bottom:10px;line-height:1.6">${info.join('<br>')}</div>`:'';})()}
+        ${addrOk?`<dl class="kv"><dt>배송 방법</dt><dd>${dpill(m)} ${dom(m).fee.toLocaleString('ko-KR')}원${dlvLocked(g,m)?' 🔒':''}</dd><dt>받는 분</dt><dd><b>${esc(m.name)}</b> · ${esc(m.phone)}</dd>${m.delivery==='convenience'?`<dt>수령 편의점</dt><dd>${esc(m.cvs)}</dd>`:`<dt>주소</dt><dd>${m.zip?'['+esc(m.zip)+'] ':''}${esc(fullAddr(m))}</dd>`}${m.memo?`<dt>요청사항</dt><dd>${esc(m.memo)}</dd>`:''}</dl>
+          ${addrDuePast(g)?'':`<div class="row end" style="margin-top:8px"><button class="btn s" id="editAddr">배송지 수정</button></div>`}`
         :`<div class="band bad" style="margin-bottom:10px">배송지가 아직 없어요. 입력하면 ${esc(nickOf(g))}에게 바로 전달됩니다.</div>`}
         <form id="addrForm" ${addrOk?'hidden':''}>
           <div class="grid2">
             <label class="f">받는 분 (실 수령자 성함)<input id="a_name" value="${esc(m.name)}" required></label>
             <label class="f">휴대폰 번호<input id="a_phone" value="${esc(m.phone)}" inputmode="tel" placeholder="010-0000-0000" required></label>
           </div>
-          <label class="f" style="margin-top:8px">배송 방법<select id="a_delivery"><option value="normal" ${m.delivery!=='convenience'?'selected':''}>일반택배 4,000원 (집·회사로 받기)</option><option value="convenience" ${m.delivery==='convenience'?'selected':''}>편의점택배 2,500원 (GS25에서 찾기)</option></select></label>
-          <div id="a_home" ${m.delivery==='convenience'?'hidden':''}>
+          ${dlvLocked(g,m)?`<label class="f" style="margin-top:8px">배송 방법 🔒<input value="${m.delivery==='convenience'?'편의점택배 2,500원 (GS25에서 찾기)':'일반택배 4,000원 (집·회사로 받기)'}" disabled><input type="hidden" id="a_delivery" value="${m.delivery==='convenience'?'convenience':'normal'}"></label>`
+          :`<label class="f" style="margin-top:8px">배송 방법<select id="a_delivery" required>${addrOk?'':'<option value="" selected disabled>배송 방법을 골라 주세요</option>'}<option value="normal" ${addrOk&&m.delivery!=='convenience'?'selected':''}>일반택배 4,000원 (집·회사로 받기)</option><option value="convenience" ${addrOk&&m.delivery==='convenience'?'selected':''}>편의점택배 2,500원 (GS25에서 찾기)</option></select></label>`}
+          <div id="a_home" ${!addrOk&&!dlvLocked(g,m)||m.delivery==='convenience'?'hidden':''}>
             <label class="f" style="margin-top:8px">우편번호 · 주소 검색<span class="row" style="gap:6px"><input id="a_zip" value="${esc(m.zip)}" inputmode="numeric" placeholder="07990" style="flex:0 0 110px"><button type="button" class="btn p" data-postcode="a_zip,a_addr,a_addr2" style="flex:1;white-space:nowrap">🔍 도로명 주소 검색</button></span></label>
             <label class="f" style="margin-top:8px">주소 (도로명)<input id="a_addr" value="${esc(m.addr)}" placeholder="서울 양천구 목동남로4길 6-23"></label>
             <label class="f" style="margin-top:8px">상세주소 (동·호수)<input id="a_addr2" value="${esc(m.addr2)}" placeholder="211동 407호"></label>
             <label class="f" style="margin-top:8px">요청사항 (한글·영문·숫자, 30자)<input id="a_memo" value="${esc(m.memo)}" maxlength="30" placeholder="공동현관 비번 1234"></label>
           </div>
-          <div id="a_cvsbox" ${m.delivery==='convenience'?'':'hidden'}>
+          <div id="a_cvsbox" ${(addrOk||dlvLocked(g,m))&&m.delivery==='convenience'?'':'hidden'}>
             <p class="help" style="margin:8px 0 4px">편의점택배는 <b>GS25</b>만 가능합니다. 배송 완료 시 입력한 휴대폰 번호로 도착 알림과 고객확인용 QR코드가 가므로 번호를 정확히 적어 주세요.</p>
             <label class="f">도착 편의점명 (GS25 지점명)<input id="a_cvs" value="${esc(m.cvs)}" placeholder="GS25 목동중앙점"></label>
           </div>
@@ -1156,6 +1167,8 @@ ${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).lengt
     <div class="subpanel yellow" ${sub('pay','ship2')?'':'hidden'}>
       <div class="card">
         <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">배송비 계산</h2><label class="sw"><input type="checkbox" id="stage2Open" ${g.stage2Open?'checked':''}> 참여자에게 공개</label></div>
+        <div class="band" style="background:var(--soft);color:var(--ink);margin-bottom:10px;line-height:1.6"><label class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><b>배송지 수정 기한</b><input type="date" id="addrDue" value="${esc(g.addrDue||'')}" style="width:auto">${g.addrDue?`<span class="muted">${addrDuePast(g)?'지남 · 참여자 수정 막힘':dueTxt(g.addrDue)+' 23:59까지'}</span>`:'<span class="muted">비우면 기한 없음</span>'}</label>
+        <div class="help" style="margin-top:4px;text-align:left">· 2차를 공개하면 참여자의 배송 방법(일택/편택)은 고정돼요. 아직 안 고른 사람은 2차 금액 대신 "배송 방법 먼저 고르기"가 떠요.<br>· 기한이 지나면 참여자는 배송지를 못 고쳐요. 관리자는 언제든 참여자 카드에서 고칠 수 있어요.</div></div>
         ${isFeeG(g)?`<div class="band" style="background:var(--cvs-bg);color:var(--ink);margin-bottom:10px">🏪 수고비 공구예요. 해외배송비는 모두 0원으로 두고, 2차에서는 국내배송비만 정산합니다. (모집폼 탭에서 방식을 바꿀 수 있어요)</div>`:''}
         <div class="grp" ${isFeeG(g)?'hidden':''}><div class="grp-h">장바구니별 배대지 청구액</div>
         <p class="help">국내배송비는 고정(편의점 2,500원 · 일반 4,000원). 해외배송비는 장바구니마다 배대지 청구액을 넣으면 그 장바구니 사람들끼리 나눕니다. 관세 때문에 주문을 나눴으면 장바구니를 추가하고, 아래 입금 확인에서 사람마다 몇 번 장바구니인지 고르세요. 특정 사람만 다르게 하려면 그 사람 칸에 직접 넣으세요(고정).</p>
@@ -1358,8 +1371,8 @@ function bind(){
   app.querySelectorAll('[data-pickm]').forEach(b=>b.onclick=()=>{V.mid=b.dataset.pickm;saveView();render();});
   const dof=document.getElementById('demoOff'); if(dof) dof.onclick=()=>{S.groups=S.groups.filter(x=>!x.demo);try{localStorage.setItem(DEMO_FLAG,'1');}catch(e){}V.gid=null;save();render();toast('예시 공구를 지웠어요');};
   const ea=document.getElementById('editAddr'); if(ea) ea.onclick=()=>{document.getElementById('addrForm').hidden=false;ea.hidden=true;};
-  const ad=document.getElementById('a_delivery'); if(ad) ad.onchange=()=>{document.getElementById('a_home').hidden=ad.value==='convenience';document.getElementById('a_cvsbox').hidden=ad.value!=='convenience';};
-  const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();m.name=v('a_name');m.phone=v('a_phone');m.delivery=v('a_delivery');if(m.delivery==='convenience'){m.cvs=v('a_cvs');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
+  const ad=document.getElementById('a_delivery'); if(ad) ad.onchange=()=>{document.getElementById('a_home').hidden=ad.value!=='normal';document.getElementById('a_cvsbox').hidden=ad.value!=='convenience';};
+  const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();if(hasAddr(m)&&addrDuePast(g)){toast('배송지 수정 기한이 지났어요');return;}const nd=dlvLocked(g,m)?m.delivery:v('a_delivery');if(nd!=='normal'&&nd!=='convenience'){toast('배송 방법을 골라 주세요');return;}if(g.stage2Open&&!dlvLocked(g,m)&&!confirm((nd==='convenience'?'편의점택배 2,500원':'일반택배 4,000원')+'으로 정할까요?\n저장하면 배송 방법은 바꿀 수 없어요.'))return;m.name=v('a_name');m.phone=v('a_phone');m.delivery=nd;if(m.delivery==='convenience'){m.cvs=v('a_cvs');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
   app.querySelectorAll('[data-proof]').forEach(op=>op.onclick=()=>openModal(`<div class="row between"><h2 class="t" style="font-size:19px">📎 증빙 서류 (${g.photos.length}장)</h2><button class="btn s" data-close>닫기</button></div>${g.photos.map(p=>`<figure class="pic"><img src="${p.data}" alt="${esc(p.name)}"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}<div class="row end" style="margin-top:10px"><button class="btn" data-close>닫기</button></div>`));
   app.querySelectorAll('[data-saveimg]').forEach(si=>si.onclick=async()=>{
     if(typeof html2canvas!=='function'){toast('이미지 변환 도구를 불러오지 못했어요');return;}
@@ -1428,6 +1441,7 @@ function bind(){
   app.querySelectorAll('[data-cart]').forEach(i=>i.onchange=()=>{M(i.dataset.cart).cart=+i.value;distribute(g);save();render();});
   const ca=document.getElementById('cartAdd'); if(ca) ca.onclick=()=>{g.carts.push(blankCart());save();render();toast(g.carts.length+'번 장바구니를 추가했어요. 입금 확인에서 사람을 배정하세요');};
   app.querySelectorAll('[data-dlv]').forEach(i=>i.onchange=()=>{M(i.dataset.dlv).delivery=i.value;save();render();});
+  const adue=document.getElementById('addrDue'); if(adue) adue.onchange=()=>{g.addrDue=adue.value||'';save();render();toast(g.addrDue?'배송지 수정 기한을 '+dueTxt(g.addrDue)+'로 정했어요':'기한을 없앴어요');};
   const so=document.getElementById('stage2Open'); if(so) so.onchange=()=>{g.stage2Open=so.checked;save();render();toast(so.checked?'2차 정산을 공개했어요':'2차 정산을 숨겼어요');};
   app.querySelectorAll('[data-track]').forEach(i=>i.onchange=()=>{const x=M(i.dataset.track);x.tracking=i.value.trim();x.delivered=false;x.deliveredAt='';x.trackLv=0;x.trackMsg='';save();render();toast(x.name+' 운송장 저장');});
   app.querySelectorAll('[data-packed]').forEach(i=>i.onchange=()=>{M(i.dataset.packed).packed=i.checked;save();render();});
