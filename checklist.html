@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#9FA9D8">
+<title>치이카와 크리스마스 마켓 구매 체크리스트</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{--bg:#E8EAF7;--card:#fff;--ink:#272B45;--muted:#7F849C;--line:#DFE2F2;--soft:#F1F2FA;--acc:#BAC2EE;--acc-ink:#2E3770;--ok:#5662B0;--keep:#FBE7F1;--keep-ink:#9C2F6B}
+@media (prefers-color-scheme:dark){:root{--bg:#17182A;--card:#222439;--ink:#EEEFF8;--muted:#9B9EB9;--line:#33364F;--soft:#2B2D44;--acc:#9AA4E0;--acc-ink:#1C2150;--ok:#B9C1EC;--keep:#3A2233;--keep-ink:#F4A9CF}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 14px 60px}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 14px}
+.tabs{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:12px}
+.tabs button{border:0;background:none;color:var(--muted);font:inherit;font-size:15px;font-weight:700;padding:10px 4px;border-radius:999px}
+.tabs button[aria-pressed="true"]{background:var(--acc);color:var(--acc-ink)}
+.sum{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.sum small{display:block;font-size:12px;color:var(--muted)}
+.sum b{font-size:22px}
+.bar{grid-column:1/3;height:8px;border-radius:8px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:8px}
+.list{display:flex;flex-direction:column;gap:8px}
+.it{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.it .box{flex:0 0 26px;height:26px;border-radius:8px;border:2px solid var(--acc);display:grid;place-items:center;font-size:17px;color:var(--acc-ink)}
+.it.on .box{background:var(--acc)}
+.it .nm{flex:1;min-width:0;font-size:15px;line-height:1.4}
+.it .nm em{font-style:normal;font-weight:700}
+.it .nm small{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.it .pr{flex:0 0 auto;text-align:right;font-weight:700;font-size:15px}
+.it.on .nm,.it.on .pr{opacity:.4;text-decoration:line-through}
+.it.keep{background:var(--keep);border-color:transparent}
+.tag{display:inline-block;font-size:11px;font-weight:700;background:var(--keep-ink);color:#fff;border-radius:5px;padding:1px 6px;margin-right:4px;vertical-align:1px}
+table{width:100%;border-collapse:collapse;background:var(--card);border-radius:12px;overflow:hidden;font-size:14px}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{background:var(--soft);font-size:12px;color:var(--muted)}
+tfoot td{font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;font-size:14px;line-height:1.6}
+.card h2{font-size:16px;margin:0 0 6px}
+.row{display:flex;justify-content:space-between;gap:10px}
+.reset{display:block;margin:18px auto 0;border:1px solid var(--line);background:var(--card);color:var(--muted);font:inherit;font-size:13px;padding:8px 14px;border-radius:9px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎄 치이카와 크리스마스 마켓</h1>
+  <p class="sub">눌러서 체크해요. 체크는 이 폰에만 저장돼요. 가격은 모두 세금 포함.</p>
+  <div class="tabs" role="tablist">
+    <button data-t="me">나</button><button data-t="sis">동생</button><button data-t="all">전체</button><button data-t="mirror">스티커</button>
+  </div>
+  <div id="view"></div>
+</div>
+<script>
+const ME=[["크리스마스 시장 인형 빅누이 (우사기)",3190],["크리스마스 시장 인형 빅누이 (치이카와)",3190],["크리스마스 시장 인형 빅누이 (하치와레)",3190],["캔디가 들어간 돈주머니 파우치 (우사기)",2420],["마스코트 파우치",2200],["산타의 마스코트 (치이카와)",2000],["산타의 마스코트 (하치와레)",2000],["산타 씨 마스코트 (우사기)",2000,"keep"],["산타의 마스코트 (모몽가)",2000],["산타 씨 마스코트 (쿠리 만쥬)",2000],["산타 씨 마스코트 (랏코)",2000],["산타의 마스코트 (시사)",2000],["산타의 모자 키 체인 (우사기)",1430],["산타의 모자 키 체인 (쿠리만쥬)",1430],["산타의 모자 키 체인 (시사)",1430],["산타의 모자 열쇠 고리 (랏코)",1430],["트레이딩 미러 스티커 8종 세트",3520,"","8장 1세트 · 하치는 다난님, 우사기는 소장"],["트리 우사기 봉제 인형 (초록 트리 모양)",2860,"keep","번역하면 '나무 토끼 봉제 인형'으로 나와요"]];
+const SIS=[["크리스마스리스 봉제 인형",6820],["캔디가 들어간 돈주머니 파우치 (우사기)",2420],["마스코트 파우치",2200],["산타의 마스코트 (치이카와)",2000],["산타의 마스코트 (하치와레)",2000],["산타 씨 마스코트 (우사기)",2000],["산타의 마스코트 (모몽가)",2000],["산타 씨 마스코트 (쿠리 만쥬)",2000],["산타 씨 마스코트 (랏코)",2000],["산타의 마스코트 (시사)",2000],["산타 씨 마스코트 (카니)",2000],["산타의 모자 키 체인 (우사기)",1430],["산타의 모자 키 체인 (쿠리만쥬)",1430],["산타의 모자 키 체인 (시사)",1430],["산타의 모자 열쇠 고리 (랏코)",1430],["트리 우사기 봉제 인형 (초록 트리 모양)",2860,"keep","번역하면 '나무 토끼 봉제 인형'으로 나와요"]];
+const MIRROR=[["치이카와",1,0,0],["하치와레",1,1,0],["우사기",1,0,1],["모몽가",1,0,0],["쿠리만쥬",1,0,0],["랏코",1,0,0],["시사",1,0,0],["카니",1,0,0]];
+const KEY='xmas-market-2026-checks';
+let C={};try{C=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+let T='me';try{T=localStorage.getItem(KEY+'-tab')||'me'}catch(e){}
+const yen=n=>'¥'+n.toLocaleString('ko-KR');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nameHtml=n=>esc(n).replace(/\(([^)]+)\)$/,'<em>($1)</em>');
+function save(){try{localStorage.setItem(KEY,JSON.stringify(C));localStorage.setItem(KEY+'-tab',T)}catch(e){}}
+function list(who,arr){
+  const tot=arr.reduce((a,x)=>a+x[1],0), done=arr.filter((x,i)=>C[who+i]).reduce((a,x)=>a+x[1],0), cnt=arr.filter((x,i)=>C[who+i]).length;
+  return `<div class="sum"><div><small>남은 금액</small><b>${yen(tot-done)}</b></div><div style="text-align:right"><small>${cnt} / ${arr.length}개 샀어요</small><b>${yen(tot)}</b></div><div class="bar"><i style="width:${Math.round(cnt/arr.length*100)}%"></i></div></div>
+  <div class="list">${arr.map((x,i)=>`<div class="it ${C[who+i]?'on':''} ${x[2]==='keep'?'keep':''}" data-k="${who+i}"><span class="box">${C[who+i]?'✓':''}</span><span class="nm">${x[2]==='keep'?'<span class="tag">소장</span>':''}${nameHtml(x[0])}${x[3]?`<small>${esc(x[3])}</small>`:''}</span><span class="pr">${yen(x[1])}</span></div>`).join('')}</div>
+  <button class="reset" data-reset="${who}">${who==='me'?'나':'동생'} 체크 모두 지우기</button>`;
+}
+function allView(){
+  const m=ME.reduce((a,x)=>a+x[1],0), s=SIS.reduce((a,x)=>a+x[1],0);
+  return `<div class="card"><h2>환전할 엔화 (내 것 포함)</h2>
+    <div class="row"><span>나</span><b>${yen(m)}</b></div><div class="row"><span>동생</span><b>${yen(s)}</b></div>
+    <div class="row" style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px"><span>합계</span><b>${yen(m+s)}</b></div></div>
+  <div class="card"><h2>그중</h2>
+    <div class="row"><span>참여자 물건값 (15명 · 31개)</span><b>¥65,510</b></div>
+    <div class="row"><span>내 몫 (소장 + 스티커 나머지 7장)</span><b>¥10,800</b></div>
+    <p style="margin:8px 0 0;color:var(--muted);font-size:13px">내 몫: 소장 우사기 마스코트 ¥2,000 · 트리 우사기 2개 ¥5,720 · 미러 스티커 7장 ¥3,080</p></div>
+  <div class="card"><h2>나누는 규칙</h2>1인 1개 제한이라 2개 필요한 품목은 나·동생이 1개씩 사요. 1개짜리는<br>· 나: 빅누이 우사기·치이카와·하치와레, 미러 스티커 세트<br>· 동생: 리스 봉제 인형, 산타 씨 마스코트 카니</div>`;
+}
+function mirrorView(){
+  const f=i=>MIRROR.reduce((a,x)=>a+x[i],0);
+  return `<div class="card"><h2>미러 스티커 8종 1세트 (나가 사요)</h2>하치와레는 다난님, 우사기는 소장, 나머지 6장은 남아요.</div>
+  <table><thead><tr><th>캐릭터</th><th>총</th><th>참여자</th><th>소장</th><th>남음</th></tr></thead><tbody>${MIRROR.map(x=>`<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]||''}</td><td>${x[3]||''}</td><td>${x[1]-x[2]-x[3]||''}</td></tr>`).join('')}</tbody>
+  <tfoot><tr><td>합계</td><td>${f(1)}</td><td>${f(2)}</td><td>${f(3)}</td><td>${f(1)-f(2)-f(3)}</td></tr></tfoot></table>`;
+}
+function render(){
+  document.querySelectorAll('[data-t]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.t===T));
+  const v=document.getElementById('view');
+  v.innerHTML=T==='me'?list('me',ME):T==='sis'?list('sis',SIS):T==='all'?allView():mirrorView();
+  v.querySelectorAll('[data-k]').forEach(el=>el.onclick=()=>{const k=el.dataset.k;C[k]=!C[k];if(!C[k])delete C[k];save();render();});
+  v.querySelectorAll('[data-reset]').forEach(b=>b.onclick=()=>{if(b.dataset.armed){Object.keys(C).forEach(k=>{if(k.startsWith(b.dataset.reset))delete C[k]});save();render();}else{b.dataset.armed=1;b.textContent='정말 지울까요? 한 번 더 누르기';}});
+}
+document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{T=b.dataset.t;save();render();window.scrollTo(0,0);});
+render();
+</script>
+</body>
+</html>
