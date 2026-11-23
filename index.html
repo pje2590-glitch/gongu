@@ -480,6 +480,8 @@ body{position:fixed;inset:0;width:100%}
 body{padding:0!important}
 #scroller{position:absolute;inset:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:calc(env(safe-area-inset-top,0px) + 26px);padding-bottom:40px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior:none}
 .secsw>button{min-width:0;overflow:hidden}
+.tabs{overflow:hidden}.tabs>[role=tab]{flex:1 0 auto!important;min-width:0!important;white-space:nowrap}
+.tabs .n{display:inline-block;white-space:nowrap}
 </style>
 </head>
 <body><div id="scroller">
@@ -2018,17 +2020,22 @@ window.addEventListener('hashchange',()=>{readHash();render();});
 render();
 
 /* 한 줄 맞춤: 넘치면 자간 → 글자 크기 순으로 줄여서 한 줄에 넣기. 너무 길면(70% 이하) 그때만 단어 단위로 줄바꿈 */
-const FIT_SEL='.secsw>button,.chips>button,.tabs>[role=tab],.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
+const FIT_SEL='.secsw>button,.chips>button,.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .nm,.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
 function fitOne(el){
   const st=el.style; st.letterSpacing='';st.fontSize='';st.whiteSpace='nowrap';
   if(el.scrollWidth<=el.clientWidth+1) return;
   for(const ls of [-.02,-.04,-.06]){ st.letterSpacing=ls+'em'; if(el.scrollWidth<=el.clientWidth+1) return; }
-  const base=parseFloat(getComputedStyle(el).fontSize);
-  for(let k=.96;k>=.7;k-=.03){ st.fontSize=(base*k).toFixed(2)+'px'; if(el.scrollWidth<=el.clientWidth+1) return; }
+  const base=parseFloat(getComputedStyle(el).fontSize), never=el.matches('.tabs>[role=tab],.secsw>button'), min=never?.5:.7;
+  for(let k=.96;k>=min;k-=.03){ st.fontSize=(base*k).toFixed(2)+'px'; if(el.scrollWidth<=el.clientWidth+1) return; }
+  if(never) return;
   st.fontSize='';st.letterSpacing='-.02em';st.whiteSpace='';
 }
 let fitRaf=0;
-function fitAll(){ cancelAnimationFrame(fitRaf); fitRaf=requestAnimationFrame(()=>{ document.querySelectorAll(FIT_SEL).forEach(el=>{ if(el.offsetParent!==null) fitOne(el); }); }); }
+function fitTabs(t){ const bs=[...t.children]; bs.forEach(b=>{b.style.fontSize='';b.style.letterSpacing='';b.style.paddingLeft='';b.style.paddingRight='';});
+  if(t.scrollWidth<=t.clientWidth+1) return; bs.forEach(b=>{b.style.paddingLeft='3px';b.style.paddingRight='3px';b.style.letterSpacing='-.03em';});
+  const base=bs.map(b=>parseFloat(getComputedStyle(b).fontSize));
+  for(let k=.97;k>=.5;k-=.03){ bs.forEach((b,i)=>b.style.fontSize=(base[i]*k).toFixed(2)+'px'); if(t.scrollWidth<=t.clientWidth+1) return; } }
+function fitAll(){ cancelAnimationFrame(fitRaf); fitRaf=requestAnimationFrame(()=>{ document.querySelectorAll('.tabs').forEach(t=>{ if(t.offsetParent!==null) fitTabs(t); }); document.querySelectorAll(FIT_SEL).forEach(el=>{ if(el.offsetParent!==null) fitOne(el); }); }); }
 new MutationObserver(fitAll).observe(document.body,{childList:true,subtree:true});
 window.addEventListener('resize',fitAll);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitAll);
