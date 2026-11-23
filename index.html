@@ -482,6 +482,8 @@ body{padding:0!important}
 .secsw>button{min-width:0;overflow:hidden}
 .tabs{overflow:hidden}.tabs>[role=tab]{flex:1 0 auto!important;min-width:0!important;white-space:nowrap}
 .tabs .n{display:inline-block;white-space:nowrap}
+.top.guest{justify-content:center;text-align:center}.top.guest .brand{display:block;text-align:center}
+.mv .panel>.row{justify-content:center}.mv .panel>.help.keep{text-align:center}
 </style>
 </head>
 <body><div id="scroller">
@@ -778,12 +780,12 @@ function render(){
   const app=document.getElementById('app'); let g=G(); if(g) V.gid=g.id;
   if(formView){
     const fg=S.groups.find(x=>x.id===formView);
-    app.innerHTML=`<div class="top"><div class="brand">${fg?esc(fg.title)+' 공구':'모집폼'}<small>${fg?'수요조사 · '+esc(nickOf(fg)):''}</small></div></div><div class="cols single"><div class="panel">${fg?renderForm(fg):LOADING?`<div class="card loadcard"><div class="spin"></div><h2>불러오는 중이에요</h2><p class="help">잠시만 기다려 주세요. 처음 열 때는 몇 초 걸릴 수 있어요.</p></div>`:`<div class="card"><h2>${LOADFAIL?'연결이 잠깐 끊겼어요':'폼을 찾을 수 없어요'}</h2>${LOADFAIL?'<p><button class="btn p" onclick="location.reload()">다시 불러오기</button></p>':''}<p class="help">링크를 다시 확인해 주세요.</p></div>`}</div></div>`;
+    app.innerHTML=`<div class="top guest"><div class="brand">${fg?esc(fg.title)+' 공구':'모집폼'}<small>${fg?'수요조사 · '+esc(nickOf(fg)):''}</small></div></div><div class="cols single"><div class="panel">${fg?renderForm(fg):LOADING?`<div class="card loadcard"><div class="spin"></div><h2>불러오는 중이에요</h2><p class="help">잠시만 기다려 주세요. 처음 열 때는 몇 초 걸릴 수 있어요.</p></div>`:`<div class="card"><h2>${LOADFAIL?'연결이 잠깐 끊겼어요':'폼을 찾을 수 없어요'}</h2>${LOADFAIL?'<p><button class="btn p" onclick="location.reload()">다시 불러오기</button></p>':''}<p class="help">링크를 다시 확인해 주세요.</p></div>`}</div></div>`;
     bind(); return;
   }
   if(personal){
     const m=g&&!g.closed&&g.members.find(x=>x.id===personal);
-    app.innerHTML=`<div class="top"><div class="brand">${m?esc(g.title)+' 공구':'정산서'}<small>${m?'정산서 · '+esc(nickOf(g)):''}</small></div></div><div class="cols single"><div class="panel mv">${m?renderMember(g):LOADING?`<div class="card loadcard"><div class="spin"></div><h2>불러오는 중이에요</h2><p class="help">잠시만 기다려 주세요. 처음 열 때는 몇 초 걸릴 수 있어요.</p></div>`:`<div class="card"><h2>${LOADFAIL?'연결이 잠깐 끊겼어요':g&&g.closed?'마무리된 공구예요':'정산서를 찾을 수 없어요'}</h2>${LOADFAIL?'<p><button class="btn p" onclick="location.reload()">다시 불러오기</button></p>':''}<p class="help">${LOADFAIL?'인터넷 연결을 확인하고 다시 불러와 주세요.':g&&g.closed?'공구가 마무리되어 이 정산서는 더 이상 열리지 않습니다. 참여해 주셔서 감사합니다.':'링크가 바뀌었거나 아직 준비 중입니다. 보내준 사람에게 다시 받아 주세요.'}</p></div>`}</div></div>`;
+    app.innerHTML=`<div class="top guest"><div class="brand">${m?esc(g.title)+' 공구':'정산서'}<small>${m?'정산서 · '+esc(nickOf(g)):''}</small></div></div><div class="cols single"><div class="panel mv">${m?renderMember(g):LOADING?`<div class="card loadcard"><div class="spin"></div><h2>불러오는 중이에요</h2><p class="help">잠시만 기다려 주세요. 처음 열 때는 몇 초 걸릴 수 있어요.</p></div>`:`<div class="card"><h2>${LOADFAIL?'연결이 잠깐 끊겼어요':g&&g.closed?'마무리된 공구예요':'정산서를 찾을 수 없어요'}</h2>${LOADFAIL?'<p><button class="btn p" onclick="location.reload()">다시 불러오기</button></p>':''}<p class="help">${LOADFAIL?'인터넷 연결을 확인하고 다시 불러와 주세요.':g&&g.closed?'공구가 마무리되어 이 정산서는 더 이상 열리지 않습니다. 참여해 주셔서 감사합니다.':'링크가 바뀌었거나 아직 준비 중입니다. 보내준 사람에게 다시 받아 주세요.'}</p></div>`}</div></div>`;
     bind(); return;
   }
   const tradeGs=S.groups.filter(x=>x.kind==='trade'&&!x.closed), formGs=S.groups.filter(x=>x.kind!=='trade'&&!x.closed);
@@ -2039,6 +2041,9 @@ function fitAll(){ cancelAnimationFrame(fitRaf); fitRaf=requestAnimationFrame(()
 new MutationObserver(fitAll).observe(document.body,{childList:true,subtree:true});
 window.addEventListener('resize',fitAll);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitAll);
+/* 손글씨 폰트가 늦게 받아지면 글자 폭이 바뀌니 그때 다시 맞추기 */
+if(document.fonts&&document.fonts.addEventListener) document.fonts.addEventListener('loadingdone',fitAll);
+[300,1000,2500,5000].forEach(t=>setTimeout(fitAll,t));
 document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 
 /* 두 손가락 확대·더블탭 확대 막기 */
