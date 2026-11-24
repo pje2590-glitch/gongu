@@ -491,10 +491,20 @@ body{padding:0!important}
 .ck[data-tab]{cursor:pointer}.ck.no .sb{color:var(--bad);font-weight:700}
 .sts{flex-wrap:nowrap!important;overflow:hidden;font-size:12px;min-width:0;max-width:100%}.sts .st{font-size:1em;white-space:nowrap;flex:none}
 .subtabs{flex-wrap:nowrap!important;overflow:hidden}.subtabs button{flex:0 0 auto}
+/* 참여자 탭: 한 것(파랑) / 해야 할 것(빨강) / 기다리는 중(노랑) */
+.tabs{gap:3px}
+.tabs button.done,.tabs button.todo,.tabs button.wait{border-radius:9px 9px 0 0;font-weight:700}
+.tabs button.done{background:var(--ok-bg);color:var(--ok)}
+.tabs button.todo{background:var(--bad-bg);color:var(--bad)}
+.tabs button.wait{background:var(--cvs-bg);color:var(--cvs)}
+.tabs button.done[aria-selected="true"]{border-bottom:3px solid var(--ok)}
+.tabs button.todo[aria-selected="true"]{border-bottom:3px solid var(--bad)}
+.tabs button.wait[aria-selected="true"]{border-bottom:3px solid var(--cvs)}
+.tabs button[aria-selected="true"]{border-bottom-width:3px}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.24-②</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.24-④</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -776,7 +786,7 @@ function timeline(g){
 const SUBDEF={settings:'basic',notify:'all',ship:'pickup',pay:'p1',status:'main',form:'setup'};
 const sub=(key,id)=>((V.sub&&V.sub[key])||SUBDEF[key])===id;
 function subtabs(key,list){return `<div class="subtabs" role="tablist">${list.map(t=>`<button role="tab" class="${t.c||''}" aria-selected="${sub(key,t.id)}" data-sub="${key}:${t.id}">${esc(t.t)}${t.n?`<span class="n">${t.n}</span>`:''}</button>`).join('')}</div>`;}
-function tabs(list,cur,key){return `<div class="tabs" role="tablist">${list.map(t=>`<button role="tab" aria-selected="${t.id===cur}" data-tab="${key}:${t.id}">${esc(t.t)}${t.n?`<span class="n">${t.n}</span>`:''}</button>`).join('')}</div>`;}
+function tabs(list,cur,key){return `<div class="tabs" role="tablist">${list.map(t=>`<button role="tab" class="${t.c||''}" aria-selected="${t.id===cur}" data-tab="${key}:${t.id}">${esc(t.t)}${t.n?`<span class="n">${t.n}</span>`:''}</button>`).join('')}</div>`;}
 function logiRow(g,m,i){
   const box=m.box||dom(m).box;
   const item=m.items[0]?(m.items.length>1?`${m.items[0].n.slice(0,6)} 외 ${m.items.length-1}건`:m.items[0].n):'굿즈';
@@ -860,13 +870,13 @@ function renderMember(g){
     <div class="card">
       <div class="row between" style="margin-bottom:8px"><b>${esc(m.name)}님 확인 사항</b>${statusPill(g)}</div>
       <div class="checks">
-        ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 더 보내기':'👉 입금해야 해요'),'s1')}
-        ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':!addrOk?'👉 배송지 먼저':(m.paid2>0?won(rem2)+' 더 보내기':'👉 입금해야 해요'),!addrOk?'addr':'s2')}
-        ${ck(addrOk,'배송지',addrOk?dom(m).t:'👉 입력해야 해요','addr')}
-        ${showRf?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불',m.refundDone?'환불 완료':rfHasAcct(m)?'환불 대기 중':'👉 계좌 넣어야 해요','rf'):''}
+        ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 입금 필요':'입금 필요'),'s1')}
+        ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':!addrOk?'배송지 입력 필요':(m.paid2>0?won(rem2)+' 입금 필요':'입금 필요'),!addrOk?'addr':'s2')}
+        ${ck(addrOk,'배송지',addrOk?dom(m).t:'입력 필요','addr')}
+        ${showRf?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불',m.refundDone?'환불 완료':rfHasAcct(m)?'환불 대기':'계좌 입력 필요','rf'):''}
       </div>
     </div>
-    ${tabs([{id:'s1',t:'1차 정산서'}].concat(showRf?[{id:'rf',t:'환불'}]:[],[{id:'s2',t:'2차 정산서'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력'}]),T,'m')}
+    ${tabs([{id:'s1',t:'1차 정산서',c:p1?'done':'todo'}].concat(showRf?[{id:'rf',t:'환불',c:m.refundDone?'done':rfHasAcct(m)?'wait':'todo'}]:[],[{id:'s2',t:'2차 정산서',c:!g.stage2Open?'':p2?'done':'todo'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력',c:addrOk?'done':'todo'}]),T,'m')}
 
     <div ${T!=='s1'?'hidden':''} class="panel">
       <div class="receipt" id="receiptEl1">
