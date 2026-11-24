@@ -508,10 +508,16 @@ body{padding:0!important}
 .tabs button.done{background:var(--done-bg)!important;color:var(--done)!important}
 .tabs button.done[aria-selected="true"]{border-bottom-color:var(--done)!important}
 .st.ok{background:var(--done-bg)!important;color:var(--done)!important}
+/* 구매 내역 입력: 상품명은 한 줄 전체, 아래 줄에 수량·현지가·원화·수고비 */
+.items .it{grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 32px!important;row-gap:4px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}
+.items .it input[data-f="n"]{grid-column:1/-1;font-weight:700}
+.items .it input{min-width:0;width:100%}
+.items .it .x{grid-row:2;grid-column:5}
+.it-h{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 32px;gap:4px;padding:0 9px;font-size:11px;color:var(--muted);margin-top:6px}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-①</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-③</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -1157,7 +1163,7 @@ ${subtabs('form',[{id:'setup',t:'폼·상품'},{id:'calc',t:'장바구니 계산
         <div class="prow pr" data-p="${p.id}" style="grid-template-columns:${p.photo?'56px 1fr':'1fr'}">
           ${p.photo?`<img src="${p.photo}" alt="" style="width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--line)">`:''}
           <div>
-            <div class="pr-l1"><input class="nmi" data-pf="name" data-pid="${p.id}" value="${esc(p.name)}" placeholder="상품명"><label class="f">현지가 (${sym1(g)})<input data-pf="fx" data-pid="${p.id}" inputmode="decimal" value="${p.fx||''}" placeholder="0"></label>${p.fx?`<span class="krw">≈ ${won(p.price||0)}</span>`:`<label class="f">원화<input data-pf="price" data-pid="${p.id}" inputmode="numeric" value="${p.price||''}" placeholder="원"></label>`}</div>
+            <div class="pr-l1"><input class="nmi" data-pf="name" data-pid="${p.id}" value="${esc(p.name)}" placeholder="상품명을 입력하세요"><label class="f">현지가 (${sym1(g)})<input data-pf="fx" data-pid="${p.id}" inputmode="decimal" value="${p.fx||''}" placeholder="0"></label>${p.fx?`<span class="krw">≈ ${won(p.price||0)}</span>`:`<label class="f">원화<input data-pf="price" data-pid="${p.id}" inputmode="numeric" value="${p.price||''}" placeholder="원"></label>`}</div>
             <div class="pr-l2"><label class="f">1인 최대<input data-pf="maxPer" data-pid="${p.id}" inputmode="numeric" value="${p.maxPer}"></label><label class="f">최소 목표<input data-pf="minTarget" data-pid="${p.id}" inputmode="numeric" value="${p.minTarget}"></label><label class="f">분류<input data-pf="cat" data-pid="${p.id}" value="${esc(p.cat||'')}" placeholder="예) 마스코트" list="catlist"></label></div>
             ${isFeeG(g)?`<div class="row pr-fee"><span class="help">수고비</span>${(f.feeTiers||DEFAULT_TIERS).map(t=>`<button class="btn s ${p.fee===t.v?'p':''}" data-fee="${p.id}:${t.v}">${esc(t.t)} ${t.v.toLocaleString('ko-KR')}</button>`).join('')}<input data-pf="fee" data-pid="${p.id}" inputmode="numeric" value="${p.fee||''}" placeholder="직접" style="width:72px;padding:4px 8px"></div>`:''}
             <div class="row between pr-l3">
@@ -1677,16 +1683,20 @@ function editMember(g,m,isNew){
     <label class="f" style="margin-top:8px">요청사항<input id="e_memo" value="${esc(m.memo)}" maxlength="30"></label>
     <label class="f" style="margin-top:8px">편의점택배일 때 · 도착 편의점명 (GS25 지점명)<input id="e_cvs" value="${esc(m.cvs)}" placeholder="GS25 목동중앙점"></label>
     <p class="help" style="margin:10px 0 4px">구매 내역: 상품명 · 수량 · 현지가(${sym1(g)}) · 개당 원화 · 수고비(매장 직접 구매 시). 현지가를 넣으면 원화는 <b>현지가 × ${g.rate}</b>로 자동 계산되고 정산서에 계산식이 보입니다.</p>
-    <div class="items">${m.items.map((i,k)=>`<div class="it"><input data-k="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-k="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-k="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-k="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-k="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-rm="${k}">×</button></div>`).join('')}</div>
-    <div class="row" style="margin-top:8px"><button class="btn s" id="e_add">+ 상품 추가</button><span class="muted" style="font-size:13px">1차 합계 <b class="num">${won(s1(m))}</b></span></div>
+    <div class="it-h"><span>수량</span><span>현지가 ¥</span><span>원화(자동)</span><span>수고비</span></div>
+    <div class="items">${m.items.map((i,k)=>`<div class="it"><input data-k="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명을 입력하세요"><input data-k="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-k="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-k="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-k="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-rm="${k}">×</button></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn s" id="e_add">+ 상품 추가</button><span class="muted" style="font-size:13px">1차 합계 <b class="num" id="e_s1">${won(s1(m))}</b></span></div>
     <p class="help" style="margin:14px 0 4px"><b>2차에 추가로 받을 상품</b> · 현지에서 추가로 산 물건 등. 2차 정산서에 "추가 구매 상품"으로 들어가요.</p>
-    <div class="items">${(m.extra2||[]).map((i,k)=>`<div class="it"><input data-x="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-x="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-x="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-x="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-x="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-xrm="${k}">×</button></div>`).join('')}</div>
-    <div class="row" style="margin-top:8px"><button class="btn s" id="e_xadd">+ 2차 추가 상품</button>${ex2Sum(m)?`<span class="muted" style="font-size:13px">추가 상품 합계 <b class="num">${won(ex2Sum(m))}</b></span>`:''}</div>
+    <div class="it-h"><span>수량</span><span>현지가 ¥</span><span>원화(자동)</span><span>수고비</span></div>
+    <div class="items">${(m.extra2||[]).map((i,k)=>`<div class="it"><input data-x="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명을 입력하세요"><input data-x="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-x="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-x="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-x="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-xrm="${k}">×</button></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn s" id="e_xadd">+ 2차 추가 상품</button><span class="muted" style="font-size:13px">추가 상품 합계 <b class="num" id="e_x2">${won(ex2Sum(m))}</b></span></div>
     <div class="row end" style="margin-top:10px"><button class="btn s" id="e_cancel">닫기</button><button class="btn p" id="e_save">저장</button></div>`;
     const pull=()=>{m.name=box.querySelector('#e_name').value.trim();m.phone=box.querySelector('#e_phone').value.trim();m.zip=box.querySelector('#e_zip').value.trim();m.delivery=box.querySelector('#e_dlv').value;m.addr=box.querySelector('#e_addr').value.trim();m.addr2=box.querySelector('#e_addr2').value.trim();m.box=box.querySelector('#e_box').value;m.cart=+box.querySelector('#e_cart').value||0;m.memo=box.querySelector('#e_memo').value.trim();m.cvs=box.querySelector('#e_cvs').value.trim();
       box.querySelectorAll('.it input[data-k]').forEach(i=>{const it=m.items[+i.dataset.k];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.items.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});
       m.extra2=m.extra2||[]; box.querySelectorAll('.it input[data-x]').forEach(i=>{const it=m.extra2[+i.dataset.x];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.extra2.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});};
-    box.querySelectorAll('.it input').forEach(i=>i.onchange=()=>{pull();draw();});
+    /* 입력칸을 옮겨 다녀도 화면을 다시 그리지 않음(폰 키보드 안 닫힘) — 원화·합계만 바로 갱신 */
+    const sync=()=>{box.querySelectorAll('.it input[data-f="p"]').forEach(i=>{const it=i.dataset.k!=null?m.items[+i.dataset.k]:m.extra2[+i.dataset.x];if(!it)return;i.value=it.p||0;i.readOnly=!!it.fx;i.style.background=it.fx?'var(--soft)':'';});const a=box.querySelector('#e_s1');if(a)a.textContent=won(s1(m));const b2=box.querySelector('#e_x2');if(b2)b2.textContent=won(ex2Sum(m));};
+    box.querySelectorAll('.it input').forEach(i=>{i.onchange=()=>{pull();sync();};i.oninput=()=>{if(i.dataset.f!=='n'){pull();sync();}};});
     box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{pull();m.items.splice(+b.dataset.rm,1);draw();});
     box.querySelector('#e_add').onclick=()=>{pull();m.items.push({n:'',q:1,p:0,fx:0,fee:0});draw();};
     box.querySelector('#e_xadd').onclick=()=>{pull();(m.extra2=m.extra2||[]).push({n:'',q:1,p:0,fx:0,fee:0});draw();};
