@@ -485,6 +485,12 @@ body{padding:0!important}
 .top.guest{justify-content:center;text-align:center}.top.guest .brand{display:block;text-align:center}
 .mv .panel>.row{justify-content:center}.mv .panel>.help.keep{text-align:center}
 .ver{text-align:center;font-size:11px;color:var(--muted);opacity:.6;padding:18px 0 4px}
+/* 한 줄 고정: 확인 사항 칸, 상태 배지, 작은 탭 */
+.checks{grid-template-columns:none!important;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+.ck{min-width:0;overflow:hidden}.ck .lb,.ck .sb{max-width:100%;white-space:nowrap;overflow:hidden;display:block}
+.ck[data-tab]{cursor:pointer}.ck.no .sb{color:var(--bad);font-weight:700}
+.sts{flex-wrap:nowrap!important;overflow:hidden;font-size:12px;min-width:0;max-width:100%}.sts .st{font-size:1em;white-space:nowrap;flex:none}
+.subtabs{flex-wrap:nowrap!important;overflow:hidden}.subtabs button{flex:0 0 auto}
 </style>
 </head>
 <body><div id="scroller">
@@ -845,7 +851,7 @@ function renderMember(g){
   const showRf=!!(g.refundOpen&&rfAmt(m)>0);
   if(!['s1','s2','progress','addr'].concat(showRf?['rf']:[]).includes(V.tabM)) V.tabM='s1';
   const T=V.tabM;
-  const ck=(ok,label,sub)=>`<div class="ck ${ok===null?'':ok?'ok':'no'}"><span class="mark">${ok===null?'⏳':ok?'✅':'❌'}</span><span class="lb">${label}</span><span class="sb">${sub}</span></div>`;
+  const ck=(ok,label,sub,tab)=>`<div class="ck ${ok===null?'':ok?'ok':'no'}" ${tab&&!ok?`data-tab="m:${tab}"`:''}><span class="mark">${ok===null?'⏳':ok?'✅':'❌'}</span><span class="lb">${label}</span><span class="sb">${sub}</span></div>`;
   const notice=`<div class="notice">${esc(S.notice)}</div>`;
   const head=title=>`<div class="shop">${esc(g.title)} 공구</div><div class="date">${fmtDate(g.date)} · ${esc(nickOf(g))} · ${title}</div><div class="greet">${esc(m.name)}님 안녕하세요, ${esc(nickOf(g))}입니다.</div>`;
   const proofBtn=`<button class="btn" data-proof ${g.photos.length?'':'disabled'}>📎 증빙 서류 (${g.photos.length}장)</button>`;
@@ -854,10 +860,10 @@ function renderMember(g){
     <div class="card">
       <div class="row between" style="margin-bottom:8px"><b>${esc(m.name)}님 확인 사항</b>${statusPill(g)}</div>
       <div class="checks">
-        ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 남음':'입금 전'))}
-        ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':(m.paid2>0?won(rem2)+' 남음':'입금 전'))}
-        ${ck(addrOk,'배송지 입력',addrOk?dom(m).t:'아직 안 함')}
-        ${showRf?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불',m.refundDone?'환불 완료':rfHasAcct(m)?'환불 대기':'계좌 입력 필요'):''}
+        ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 더 보내기':'👉 입금해야 해요'),'s1')}
+        ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':!addrOk?'👉 배송지 먼저':(m.paid2>0?won(rem2)+' 더 보내기':'👉 입금해야 해요'),!addrOk?'addr':'s2')}
+        ${ck(addrOk,'배송지',addrOk?dom(m).t:'👉 입력해야 해요','addr')}
+        ${showRf?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불',m.refundDone?'환불 완료':rfHasAcct(m)?'환불 대기 중':'👉 계좌 넣어야 해요','rf'):''}
       </div>
     </div>
     ${tabs([{id:'s1',t:'1차 정산서'}].concat(showRf?[{id:'rf',t:'환불'}]:[],[{id:'s2',t:'2차 정산서'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력'}]),T,'m')}
@@ -1216,7 +1222,7 @@ ${subtabs('status',[{id:'main',t:'현황·진행',c:'yellow'},{id:'close',t:'공
             <div class="nm">${esc(m.name)}</div>
             <div class="amt num">${won(s1(m))}${g.stage2Open?` <span class="muted" style="font-size:11px;font-weight:400">+${won(s2(m))}</span>`:''}</div>
             <div class="sm it">${m.items.map(i=>`${esc(i.n)} <b>×${i.q}</b>`).join(' · ')||'<span class="muted">구매 내역 없음</span>'}</div>
-            <div class="tools"><span class="sts">${ck(paid1(m),'1차')}${ck(g.stage2Open?paid2(m):null,'2차')}${ck(hasAddr(m),'배송지')}</span></div>
+            <div class="tools"><span class="sts">${ck(paid1(m),'1차')}${ck(g.stage2Open?paid2(m):null,'2차')}${ck(hasAddr(m),'배송지')}${rfAmt(m)>0?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불'):''}</span></div>
             <div class="tools" style="justify-content:flex-end;margin-top:2px"><button class="btn s" data-link="${m.id}">🔗 링크</button><button class="btn s" data-edit="${m.id}">수정</button><button class="btn s danger" data-del="${m.id}">삭제</button></div>
           </div>`;}).join('')}
         </div>
@@ -2103,12 +2109,12 @@ window.addEventListener('hashchange',()=>{readHash();render();});
 render();
 
 /* 한 줄 맞춤: 넘치면 자간 → 글자 크기 순으로 줄여서 한 줄에 넣기. 너무 길면(70% 이하) 그때만 단어 단위로 줄바꿈 */
-const FIT_SEL='.secsw>button,.chips>button,.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
+const FIT_SEL='.ck .lb,.ck .sb,.sts,.secsw>button,.chips>button,.receipt .shop,.receipt .date,.receipt .greet,.top .brand,.stage .hd b,.line>span:first-child:not(:has(.nm)),.line.item .q,.panel .card>h2,.ckbox b,.ckbox small';
 function fitOne(el){
   const st=el.style; st.letterSpacing='';st.fontSize='';st.whiteSpace='nowrap';
   if(el.scrollWidth<=el.clientWidth+1) return;
   for(const ls of [-.02,-.04,-.06]){ st.letterSpacing=ls+'em'; if(el.scrollWidth<=el.clientWidth+1) return; }
-  const base=parseFloat(getComputedStyle(el).fontSize), never=el.matches('.tabs>[role=tab],.secsw>button'), min=never?.5:.7;
+  const base=parseFloat(getComputedStyle(el).fontSize), never=el.matches('.tabs>[role=tab],.secsw>button,.ck .lb,.ck .sb,.sts'), min=never?.5:.7;
   for(let k=.96;k>=min;k-=.03){ st.fontSize=(base*k).toFixed(2)+'px'; if(el.scrollWidth<=el.clientWidth+1) return; }
   if(never) return;
   st.fontSize='';st.letterSpacing='-.02em';st.whiteSpace='';
@@ -2118,7 +2124,7 @@ function fitTabs(t){ const bs=[...t.children]; bs.forEach(b=>{b.style.fontSize='
   if(t.scrollWidth<=t.clientWidth+1) return; bs.forEach(b=>{b.style.paddingLeft='3px';b.style.paddingRight='3px';b.style.letterSpacing='-.03em';});
   const base=bs.map(b=>parseFloat(getComputedStyle(b).fontSize));
   for(let k=.97;k>=.5;k-=.03){ bs.forEach((b,i)=>b.style.fontSize=(base[i]*k).toFixed(2)+'px'); if(t.scrollWidth<=t.clientWidth+1) return; } }
-function fitAll(){ cancelAnimationFrame(fitRaf); fitRaf=requestAnimationFrame(()=>{ document.querySelectorAll('.tabs').forEach(t=>{ if(t.offsetParent!==null) fitTabs(t); }); document.querySelectorAll(FIT_SEL).forEach(el=>{ if(el.offsetParent!==null) fitOne(el); }); }); }
+function fitAll(){ cancelAnimationFrame(fitRaf); fitRaf=requestAnimationFrame(()=>{ document.querySelectorAll('.tabs,.subtabs').forEach(t=>{ if(t.offsetParent!==null) fitTabs(t); }); document.querySelectorAll(FIT_SEL).forEach(el=>{ if(el.offsetParent!==null) fitOne(el); }); }); }
 new MutationObserver(fitAll).observe(document.body,{childList:true,subtree:true});
 window.addEventListener('resize',fitAll);
 if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fitAll);
