@@ -501,10 +501,17 @@ body{padding:0!important}
 .tabs button.todo[aria-selected="true"]{border-bottom:3px solid var(--bad)}
 .tabs button.wait[aria-selected="true"]{border-bottom:3px solid var(--cvs)}
 .tabs button[aria-selected="true"]{border-bottom-width:3px}
+/* 완료 = 초록 */
+:root{--done:#2E7D4F;--done-bg:#E3F3E8}
+@media (prefers-color-scheme:dark){:root{--done:#8FD6A6;--done-bg:#1F3A29}}
+.ck.ok{background:var(--done-bg)!important}.ck.ok .lb,.ck.ok .sb{color:var(--done)!important}
+.tabs button.done{background:var(--done-bg)!important;color:var(--done)!important}
+.tabs button.done[aria-selected="true"]{border-bottom-color:var(--done)!important}
+.st.ok{background:var(--done-bg)!important;color:var(--done)!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.24-④</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.24-⑤</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -683,10 +690,14 @@ const dom=m=>DOMESTIC[m.delivery]||DOMESTIC.normal;
 const dcls=m=>m.delivery==='convenience'?'cvs':'visit';
 const dpill=m=>`<span class="pill ${dcls(m)}">${esc(dom(m).t)}</span>`;
 const ex2Sum=m=>(m.extra2||[]).reduce((a,i)=>a+(+i.q||0)*((+i.p||0)+(+i.fee||0)),0);
-const s2=m=>(+m.overseas||0)+dom(m).fee+ex2Sum(m);
+const s2=m=>fullRf(m)?0:(+m.overseas||0)+dom(m).fee+ex2Sum(m);
 const rfItems=m=>(m.items||[]).filter(i=>(+i.rf||0)>0);
 const rfAmt=m=>rfItems(m).reduce((a,i)=>a+Math.min(+i.rf||0,+i.q||0)*((+i.p||0)+(+i.fee||0)),0);
 const rfFee=m=>rfItems(m).reduce((a,i)=>a+Math.min(+i.rf||0,+i.q||0)*(+i.fee||0),0);
+const fullRf=m=>!!(m.items||[]).length&&(m.items||[]).every(i=>(+i.rf||0)>=(+i.q||0))&&!(m.extra2||[]).length;
+const rfGoneAt=m=>m.refundDone&&m.refundAt?Date.parse(m.refundAt)+864e5:0;
+const rfGone=m=>fullRf(m)&&!!rfGoneAt(m)&&Date.now()>rfGoneAt(m);
+const fmtRfT=t=>{const d=new Date(t);return (d.getMonth()+1)+'/'+d.getDate()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
 const rfHasAcct=m=>!!(m.refundBank&&m.refundAcct&&m.refundHolder);
 /* 공구 배송비 방식(공구 단위): 'ov' 해외 구매 → 해외배송비 1/n, 수고비 없음 / 'fee' 매장 직접 구매 → 수고비, 해외배송비 없음 */
 const gKind=g=>g&&g.shipKind==='fee'?'fee':'ov';
@@ -856,10 +867,11 @@ function renderMember(g){
   const m=g.members.find(x=>x.id===V.mid)||g.members[0];
   if(!m) return `<div class="card"><h2>참여자가 없어요</h2><p class="help">내 화면 → 참여자 탭에서 추가해 주세요.</p></div>`;
   V.mid=m.id; saveView();
+  if(personal&&rfGone(m)) return `<div class="card" style="text-align:center;padding:34px 18px"><div style="font-size:34px">🗂️</div><h2 style="border:0">정산서가 삭제되었어요</h2><p class="help">주문하신 상품이 모두 환불 완료되어, 환불 24시간 뒤 정산서가 삭제되었어요.<br>문의는 ${esc(nickOf(g))}에게 해 주세요. 참여해 주셔서 감사합니다 💛</p></div>`;
   const p1=paid1(m), rem1=r1(m), p2=paid2(m), rem2=r2(m), addrOk=hasAddr(m);
   const trackUrl=m.tracking?(m.delivery==='convenience'?GS_TRACK(m.tracking.replace(/\D/g,'')):(TRACK[g.courier]||TRACK['CJ대한통운'])(m.tracking.replace(/\D/g,''))):'';
   const showRf=!!(g.refundOpen&&rfAmt(m)>0);
-  if(!['s1','s2','progress','addr'].concat(showRf?['rf']:[]).includes(V.tabM)) V.tabM='s1';
+  if(!(fullRf(m)?['s1','progress']:['s1','s2','progress','addr']).concat(showRf?['rf']:[]).includes(V.tabM)) V.tabM=showRf&&fullRf(m)&&!m.refundDone?'rf':'s1';
   const T=V.tabM;
   const ck=(ok,label,sub,tab)=>`<div class="ck ${ok===null?'':ok?'ok':'no'}" ${tab&&!ok?`data-tab="m:${tab}"`:''}><span class="mark">${ok===null?'⏳':ok?'✅':'❌'}</span><span class="lb">${label}</span><span class="sb">${sub}</span></div>`;
   const notice=`<div class="notice">${esc(S.notice)}</div>`;
@@ -871,12 +883,12 @@ function renderMember(g){
       <div class="row between" style="margin-bottom:8px"><b>${esc(m.name)}님 확인 사항</b>${statusPill(g)}</div>
       <div class="checks">
         ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 입금 필요':'입금 필요'),'s1')}
-        ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':!addrOk?'배송지 입력 필요':(m.paid2>0?won(rem2)+' 입금 필요':'입금 필요'),!addrOk?'addr':'s2')}
-        ${ck(addrOk,'배송지',addrOk?dom(m).t:'입력 필요','addr')}
+        ${fullRf(m)?'':ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':(m.paid2>0?won(rem2)+' 입금 필요':'입금 필요'),!addrOk?'addr':'s2')}
+        ${fullRf(m)?'':ck(addrOk,'배송지',addrOk?dom(m).t:'입력 필요','addr')}
         ${showRf?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불',m.refundDone?'환불 완료':rfHasAcct(m)?'환불 대기':'계좌 입력 필요','rf'):''}
       </div>
     </div>
-    ${tabs([{id:'s1',t:'1차 정산서',c:p1?'done':'todo'}].concat(showRf?[{id:'rf',t:'환불',c:m.refundDone?'done':rfHasAcct(m)?'wait':'todo'}]:[],[{id:'s2',t:'2차 정산서',c:!g.stage2Open?'':p2?'done':'todo'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력',c:addrOk?'done':'todo'}]),T,'m')}
+    ${tabs([{id:'s1',t:'1차 정산서',c:p1?'done':'todo'}].concat(showRf?[{id:'rf',t:'환불',c:m.refundDone?'done':rfHasAcct(m)?'wait':'todo'}]:[],fullRf(m)?[{id:'progress',t:'진행 상황'}]:[{id:'s2',t:'2차 정산서',c:!g.stage2Open?'':p2?'done':'todo'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력',c:addrOk?'done':'todo'}]),T,'m')}
 
     <div ${T!=='s1'?'hidden':''} class="panel">
       <div class="receipt" id="receiptEl1">
@@ -907,7 +919,7 @@ function renderMember(g){
           <div class="line total"><span>환불 합계</span><span class="num">${won(rfAmt(m))}</span></div>
         </div>
         ${m.refundDone?`<div class="grand paid"><span>환불이 완료되었습니다</span><span>💛</span></div>`:`<div class="grand due"><span>돌려받으실 금액</span><span class="num">${won(rfAmt(m))}</span></div>`}
-        <div class="notice">현지에서 구매하지 못한 상품이에요. 낸 금액(수고비 포함) 그대로 돌려드려요.</div>
+        <div class="notice">현지에서 구매하지 못한 상품이에요. 낸 금액(수고비 포함) 그대로 돌려드려요.${fullRf(m)?`<br><b>주문하신 상품이 모두 환불돼요. 환불 완료 24시간 뒤 이 정산서는 삭제돼요.</b>${m.refundDone&&rfGoneAt(m)?` (${fmtRfT(rfGoneAt(m))} 삭제 예정)`:''} 필요하면 💾 이미지로 저장해 두세요.`:''}</div>
         ${rfHasAcct(m)?`<div class="acctbox"><div class="row between"><span class="pill ok">${esc(m.refundBank)}</span><span class="muted" style="font-size:13px">예금주 ${esc(m.refundHolder)}</span></div><div class="acct"><div class="n num">${esc(m.refundAcct)}</div></div><div class="band" style="margin-top:6px">${m.refundDone?'이 계좌로 환불했어요.':'이 계좌로 환불해 드릴게요.'}</div></div>`:''}
       </div>
       ${m.refundDone?'':`<div class="card" style="margin-top:12px"><h2>${rfHasAcct(m)?'환불 계좌 수정':'환불 받을 계좌'}</h2>
@@ -1289,7 +1301,7 @@ ${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).lengt
         <div class="plist">${[...tgt].sort((a,b)=>(a.refundDone?1:0)-(b.refundDone?1:0)).map(m=>`
           <div class="prow c ${m.refundDone?'':'alert'}">
             <div class="nm">${esc(m.name)}</div><div class="amt num">${won(rfAmt(m))}</div>
-            <div class="sm">${rfItems(m).map(i=>esc(i.n)+' ×'+Math.min(+i.rf||0,+i.q||0)).join(' · ')}</div>
+            <div class="sm">${rfItems(m).map(i=>esc(i.n)+' ×'+Math.min(+i.rf||0,+i.q||0)).join(' · ')}</div>${fullRf(m)?`<div class="sm" style="color:var(--bad)">전체 환불 · ${m.refundDone&&rfGoneAt(m)?(Date.now()>rfGoneAt(m)?'참여자 정산서 삭제됨 (기록은 남아요)':fmtRfT(rfGoneAt(m))+'에 참여자 정산서 삭제'):'환불 완료 24시간 뒤 참여자 정산서 삭제'}</div>`:''}
             <div class="sm">${rfHasAcct(m)?`🏦 <b>${esc(m.refundBank)} ${esc(m.refundAcct)}</b> · ${esc(m.refundHolder)}`:'<span class="muted">계좌 아직 안 보냄</span>'}</div>
             <div class="tools">${rfHasAcct(m)?`<button class="btn s" data-copy="${esc(m.refundBank+' '+String(m.refundAcct).replace(/[^0-9]/g,''))}" data-label="은행·계좌">계좌 복사</button>`:''}<button class="btn s" data-copy="${rfAmt(m)}" data-label="환불 금액">${won(rfAmt(m))} 복사</button>${m.refundDone?`<span class="pill ok">✅ 환불 완료</span><button class="btn s" data-rfundo="${m.id}">취소</button>`:`<button class="btn s p" data-rfdone="${m.id}">환불 완료</button>`}<button class="btn s" data-link="${m.id}">🔗 링크</button></div>
           </div>`).join('')}</div>
