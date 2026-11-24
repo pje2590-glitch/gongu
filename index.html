@@ -519,7 +519,7 @@ body{padding:0!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑧</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑨</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -1425,7 +1425,7 @@ ${subtabs('settings',[{id:'basic',t:'공구·환율'},{id:'photos',t:'증빙 사
         <h2>증빙 서류 사진</h2>
         <p class="help" style="margin-bottom:8px">해외배송비 결제 내역·주문 화면. 참여자 정산서의 "증빙 서류" 버튼으로 보입니다.</p>
         <label class="drop">📷 사진 선택 (여러 장 가능)<input type="file" id="photoIn" accept="image/*" multiple></label>
-        <div class="photos" style="margin-top:10px">${g.photos.map(p=>`<figure><img src="${p.data}" alt=""><button data-delphoto="${p.id}" aria-label="삭제">×</button><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>
+        <div class="photos" style="margin-top:10px">${g.photos.map(p=>`<figure><img src="${p.url||p.data}" alt="" loading="lazy" referrerpolicy="no-referrer"><button data-delphoto="${p.id}" aria-label="삭제">×</button><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}</div>
       </div>
     </div><div class="subpanel" ${sub('settings','acct')?'':'hidden'}>
       <div class="card">
@@ -1495,7 +1495,7 @@ function bind(){
   const rff=document.getElementById('rfForm'); if(rff&&m) rff.onsubmit=e=>{e.preventDefault();const b=v('rf_bank'),a=v('rf_acct').replace(/[^0-9-]/g,''),h=v('rf_holder');if(!b||!a||!h){toast('은행·계좌번호·예금주를 모두 넣어 주세요');return;}m.refundBank=b;m.refundAcct=a;m.refundHolder=h;m.rfAt=now();pushRefund(m);render();};
   const rfe=document.getElementById('rfEdit'); if(rfe) rfe.onclick=()=>{rfe.parentElement.hidden=true;document.getElementById('rfForm').hidden=false;};
   const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();if(hasAddr(m)&&addrDuePast(g)){toast('배송지 수정 기한이 지났어요');return;}const nd=dlvLocked(g,m)?m.delivery:v('a_delivery');if(nd!=='normal'&&nd!=='convenience'){toast('배송 방법을 골라 주세요');return;}if(g.stage2Open&&!dlvLocked(g,m)&&!confirm((nd==='convenience'?'편의점택배 2,500원':'일반택배 4,000원')+'으로 정할까요?\n저장하면 배송 방법은 바꿀 수 없어요.'))return;m.name=v('a_name');m.phone=v('a_phone');m.delivery=nd;if(m.delivery==='convenience'){m.cvs=v('a_cvs');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
-  app.querySelectorAll('[data-proof]').forEach(op=>op.onclick=()=>openModal(`<div class="row between"><h2 class="t" style="font-size:19px">📎 증빙 서류 (${g.photos.length}장)</h2><button class="btn s" data-close>닫기</button></div>${g.photos.map(p=>`<figure class="pic"><img src="${p.data}" alt="${esc(p.name)}"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}<div class="row end" style="margin-top:10px"><button class="btn" data-close>닫기</button></div>`));
+  app.querySelectorAll('[data-proof]').forEach(op=>op.onclick=()=>openModal(`<div class="row between"><h2 class="t" style="font-size:19px">📎 증빙 서류 (${g.photos.length}장)</h2><button class="btn s" data-close>닫기</button></div>${g.photos.map(p=>`<figure class="pic"><img src="${p.url||p.data}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}<div class="row end" style="margin-top:10px"><button class="btn" data-close>닫기</button></div>`));
   app.querySelectorAll('[data-saveimg]').forEach(si=>si.onclick=async()=>{
     if(typeof html2canvas!=='function'){toast('이미지 변환 도구를 불러오지 못했어요');return;}
     const el=document.getElementById(si.dataset.saveimg); toast('이미지 만드는 중…');
@@ -2104,11 +2104,12 @@ async function pullAll(){ if(pulling||!canFetch()||!V.adminKey) return; pulling=
   }catch(e){ syncBadge('⚠️ 불러오기 실패','bad'); toast('불러오기 실패 · 인터넷을 확인해 주세요'); } pulling=false; }
 function syncPush(){ if(!canFetch()||!V.adminKey||personal||formView) return; if(localStorage.getItem(PULLED)!==V.adminKey){ pullAll(); return; } try{localStorage.setItem(DIRTY,String(Date.now()));}catch(e){} syncBadge('✓ 저장됨 · 시트에 올리는 중','busy'); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,120); }
 function syncNow(){ if(syncBusy){syncAgain=true;return;} syncBusy=true; syncAgain=false;
-  const done=(ok,msg)=>{ syncBusy=false; if(syncAgain){syncNow();return;} if(ok){ try{localStorage.removeItem(DIRTY);}catch(e){} syncBadge('✓ 시트까지 저장 완료','ok'); } else { syncBadge('⚠️ 저장 실패 · 다시 시도 중','bad'); toast('시트 저장 실패'+(msg?': '+msg:'')+' — 30초 뒤 다시 시도해요'); setTimeout(()=>{ if(localStorage.getItem(DIRTY)) syncNow(); },30000); } };
+  const done=(ok,msg)=>{ syncBusy=false; if(syncAgain){syncNow();return;} if(ok){ try{localStorage.removeItem(DIRTY);}catch(e){} syncBadge('✓ 시트까지 저장 완료','ok'); } else { syncBadge('⚠️ 저장 실패'+(msg?' ('+String(msg).slice(0,30)+')':'')+' · 다시 시도 중','bad'); toast('시트 저장 실패'+(msg?': '+msg:'')+' — 30초 뒤 다시 시도해요'); setTimeout(()=>{ if(localStorage.getItem(DIRTY)) syncNow(); },30000); } };
   const br=localStorage.getItem(KEY+'-rev'); const payload={key:V.adminKey,state:Object.assign({},S,{groups:S.groups.filter(x=>!x.demo)})}; if(br!=null) payload.baseRev=+br;
   try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)}).then(r=>r.json()).then(j=>{
     if(j&&j.stale){ syncBusy=false; syncAgain=false; try{localStorage.removeItem(DIRTY);}catch(e){} pullMsg=true; pullAll().then(()=>{pullMsg=false; syncBadge('⚠️ 다른 화면 내용으로 바뀜','bad'); toast('다른 기기·창에서 먼저 저장된 내용이 있어서 최신으로 불러왔어요. 방금 고친 건 한 번 더 해 주세요',6000);}); return; }
     if(j&&j.rev!=null){ try{localStorage.setItem(KEY+'-rev',String(j.rev));}catch(e){} }
+    if(j&&Array.isArray(j.photos)&&j.photos.length){ j.photos.forEach(x=>{const gg=S.groups.find(q=>q.id===x.gid);const ph=gg&&(gg.photos||[]).find(q=>q.id===x.id);if(ph){ph.url=x.url;ph.fid=x.fid;delete ph.data;}}); try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} }
     done(!(j&&j.error),j&&j.error);}).catch(()=>done(false,'연결 끊김'));}catch(e){done(false);} }
 window.addEventListener('beforeunload',e=>{ if(syncBusy||localStorage.getItem(DIRTY)&&syncTimer){ e.preventDefault(); e.returnValue=''; } });
 function pushResponse(g,r){ try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({form:g.id,response:r})}).then(x=>x.json()).then(j=>{if(j&&j.closed&&j.error){g.form.open=false;g.form.responses=g.form.responses.filter(x=>x.id!==r.id);V.formDone=null;saveView();render();toast('방금 마감되어 신청이 접수되지 않았어요');}else if(j&&j.error)toast('신청 전달 실패: '+j.error);else if(j&&j.closed){g.form.open=false;render();}}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
@@ -2186,7 +2187,7 @@ document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
 
 /* 새 버전 자동 반영: 폰·깃허브가 예전 파일을 기억하고 있으면 최신 파일로 한 번 새로고침 */
-(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑧';
+(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑨';
   fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{ const m=t.match(/버전 [0-9.]+-[①-⑳]/); const ord=v=>{const x=v.match(/([0-9]+)\.([0-9]+)-(.)/);return x?(+x[1])*10000+(+x[2])*100+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(x[3])+1):0;}; if(!m||ord(m[0])<=ord(MY)) return;
     const k='gongu-verjump-'+m[0]; try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1'); }catch(e){}
     location.replace(location.pathname+'?v='+Date.now()+location.hash); }).catch(()=>{}); })();
