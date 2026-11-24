@@ -517,7 +517,7 @@ body{padding:0!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-④</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑤</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -2090,7 +2090,17 @@ let syncTimer=null;
 /* 관리자 변경 → 구글 시트 저장. 저장이 끝나기 전에 창을 닫거나 새로고침해도 다음에 열 때 이어서 올려요 */
 const DIRTY=KEY+'-dirty'; let syncBusy=false, syncAgain=false;
 function syncBadge(t,cls){ let el=document.getElementById('syncBadge'); if(!el){el=document.createElement('div');el.id='syncBadge';document.body.appendChild(el);} el.textContent=t; el.className=cls||''; clearTimeout(el._h); if(cls==='ok') el._h=setTimeout(()=>{el.className='hide';},1800); }
-function syncPush(){ if(!canFetch()||!V.adminKey||personal||formView) return; try{localStorage.setItem(DIRTY,String(Date.now()));}catch(e){} syncBadge('☁️ 저장 중…','busy'); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,250); }
+/* 안전장치: 이 기기가 시트에서 한 번도 불러온 적 없으면(앱 새로 설치 등) 올리지 않고 먼저 불러옴 → 빈 화면이 시트를 덮는 일 없음 */
+const PULLED=KEY+'-pulled';
+const hasRealData=()=>S.groups.some(g=>!g.demo&&((g.members||[]).length||(g.trades||[]).length));
+try{ if(V.adminKey&&!localStorage.getItem(PULLED)&&hasRealData()) localStorage.setItem(PULLED,V.adminKey); }catch(e){}
+let pulling=false;
+async function pullAll(){ if(pulling||!canFetch()||!V.adminKey) return; pulling=true; syncBadge('☁️ 시트에서 불러오는 중…','busy');
+  try{ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json();
+    if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=(g.members||[]).map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(PULLED,V.adminKey);localStorage.removeItem(DIRTY);}catch(e){} V.gid=null; addDemoIfNeeded&&addDemoIfNeeded(); render(); syncBadge('✓ 시트에서 불러왔어요','ok'); toast('구글 시트에서 전부 불러왔어요'); }
+    else { syncBadge('⚠️ 불러오기 실패','bad'); toast('불러오기 실패: '+((j&&j.error)||'비밀번호를 확인해 주세요')); }
+  }catch(e){ syncBadge('⚠️ 불러오기 실패','bad'); toast('불러오기 실패 · 인터넷을 확인해 주세요'); } pulling=false; }
+function syncPush(){ if(!canFetch()||!V.adminKey||personal||formView) return; if(localStorage.getItem(PULLED)!==V.adminKey){ pullAll(); return; } try{localStorage.setItem(DIRTY,String(Date.now()));}catch(e){} syncBadge('☁️ 저장 중…','busy'); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,250); }
 function syncNow(){ if(syncBusy){syncAgain=true;return;} syncBusy=true; syncAgain=false;
   const done=(ok,msg)=>{ syncBusy=false; if(syncAgain){syncNow();return;} if(ok){ try{localStorage.removeItem(DIRTY);}catch(e){} syncBadge('✓ 시트에 저장됨','ok'); } else { syncBadge('⚠️ 저장 실패 · 다시 시도 중','bad'); toast('시트 저장 실패'+(msg?': '+msg:'')+' — 30초 뒤 다시 시도해요'); setTimeout(()=>{ if(localStorage.getItem(DIRTY)) syncNow(); },30000); } };
   try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,state:Object.assign({},S,{groups:S.groups.filter(x=>!x.demo)})})}).then(r=>r.json()).then(j=>done(!(j&&j.error),j&&j.error)).catch(()=>done(false,'연결 끊김'));}catch(e){done(false);} }
@@ -2130,9 +2140,9 @@ const BOOT=(async()=>{
       render(); return;
     }
     const dAge=Date.now()-(+localStorage.getItem(DIRTY)||0); if(localStorage.getItem(DIRTY)&&dAge>=10*60*1000){ try{localStorage.removeItem(DIRTY);}catch(e){} }
-    if(V.adminKey&&localStorage.getItem(DIRTY)&&dAge<10*60*1000){ toast('저장 안 끝난 변경사항을 시트에 올리고 있어요'); syncBadge('☁️ 저장 중…','busy'); syncNow(); return; }
+    if(V.adminKey&&localStorage.getItem(DIRTY)&&dAge<10*60*1000&&localStorage.getItem(PULLED)===V.adminKey){ toast('저장 안 끝난 변경사항을 시트에 올리고 있어요'); syncBadge('☁️ 저장 중…','busy'); syncNow(); return; }
     if(V.adminKey){ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json();
-      if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=g.members.map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} render(); toast('구글 시트에서 불러왔어요'); } else if(j&&j.error){ toast('시트 불러오기 실패: '+j.error); } }
+      if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=g.members.map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(PULLED,V.adminKey);}catch(e){} render(); toast('구글 시트에서 불러왔어요'); } else if(j&&j.error){ toast('시트 불러오기 실패: '+j.error); } }
   }catch(e){ if(LOADING){ LOADING=false; LOADFAIL=true; render(); } }
 })();
 BOOT.finally(()=>{ if(!personal&&!formView){ addDemoIfNeeded(); tryImportSeed(); } });
@@ -2170,7 +2180,7 @@ document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
 
 /* 새 버전 자동 반영: 폰·깃허브가 예전 파일을 기억하고 있으면 최신 파일로 한 번 새로고침 */
-(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-④';
+(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑤';
   fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{ const m=t.match(/버전 [0-9.]+-[①-⑳]/); const ord=v=>{const x=v.match(/([0-9]+)\.([0-9]+)-(.)/);return x?(+x[1])*10000+(+x[2])*100+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(x[3])+1):0;}; if(!m||ord(m[0])<=ord(MY)) return;
     const k='gongu-verjump-'+m[0]; try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1'); }catch(e){}
     location.replace(location.pathname+'?v='+Date.now()+location.hash); }).catch(()=>{}); })();
