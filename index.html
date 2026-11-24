@@ -515,10 +515,11 @@ body{padding:0!important}
 .items .it .x{grid-row:2;grid-column:5}
 .it-h{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 32px;gap:4px;padding:0 9px;font-size:11px;color:var(--muted);margin-top:6px}
 .prow .sm.ex2{grid-column:1/-1;background:var(--cvs-bg);color:var(--ink);border-radius:8px;padding:6px 8px;margin-top:4px}.pill.ex2p{background:var(--cvs);color:#fff;font-size:11px;padding:1px 7px;border-radius:6px;font-weight:700}
+#syncBadge.busy{color:var(--ok)}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑥</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑧</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -765,7 +766,7 @@ const fullAddr=m=>[m.addr,m.addr2].filter(Boolean).join(' ');
 const nickOf=g=>g.nick||'닉네임 미설정';
 
 /* 공통 */
-function toast(t){const e=document.getElementById('toast');e.textContent=t;e.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>e.hidden=true,1800);}
+function toast(t,ms){const e=document.getElementById('toast');e.textContent=t;e.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>e.hidden=true,ms||1800);}
 function copyText(t,label){
   const done=()=>toast((label||'복사')+' 완료');
   const fallback=()=>{const ta=document.createElement('textarea');ta.value=t;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');done();}catch(e){toast('복사가 막혀 있어요. 길게 눌러 복사해 주세요');}ta.remove();};
@@ -2095,16 +2096,20 @@ function syncBadge(t,cls){ let el=document.getElementById('syncBadge'); if(!el){
 const PULLED=KEY+'-pulled';
 const hasRealData=()=>S.groups.some(g=>!g.demo&&((g.members||[]).length||(g.trades||[]).length));
 try{ if(V.adminKey&&!localStorage.getItem(PULLED)&&hasRealData()) localStorage.setItem(PULLED,V.adminKey); }catch(e){}
-let pulling=false;
+let pulling=false, pullMsg=false;
 async function pullAll(){ if(pulling||!canFetch()||!V.adminKey) return; pulling=true; syncBadge('☁️ 시트에서 불러오는 중…','busy');
   try{ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json();
-    if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=(g.members||[]).map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(PULLED,V.adminKey);localStorage.removeItem(DIRTY);}catch(e){} V.gid=null; addDemoIfNeeded&&addDemoIfNeeded(); render(); syncBadge('✓ 시트에서 불러왔어요','ok'); toast('구글 시트에서 전부 불러왔어요'); }
+    if(j&&j.groups){ const rv=j.rev; delete j.rev; const keepG=V.gid; S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=(g.members||[]).map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(PULLED,V.adminKey);localStorage.removeItem(DIRTY);if(rv!=null)localStorage.setItem(KEY+'-rev',String(rv));}catch(e){} V.gid=S.groups.some(x=>x.id===keepG)?keepG:null; addDemoIfNeeded&&addDemoIfNeeded(); render(); syncBadge('✓ 시트에서 불러왔어요','ok'); if(!pullMsg) toast('구글 시트에서 전부 불러왔어요'); }
     else { syncBadge('⚠️ 불러오기 실패','bad'); toast('불러오기 실패: '+((j&&j.error)||'비밀번호를 확인해 주세요')); }
   }catch(e){ syncBadge('⚠️ 불러오기 실패','bad'); toast('불러오기 실패 · 인터넷을 확인해 주세요'); } pulling=false; }
-function syncPush(){ if(!canFetch()||!V.adminKey||personal||formView) return; if(localStorage.getItem(PULLED)!==V.adminKey){ pullAll(); return; } try{localStorage.setItem(DIRTY,String(Date.now()));}catch(e){} syncBadge('☁️ 저장 중…','busy'); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,250); }
+function syncPush(){ if(!canFetch()||!V.adminKey||personal||formView) return; if(localStorage.getItem(PULLED)!==V.adminKey){ pullAll(); return; } try{localStorage.setItem(DIRTY,String(Date.now()));}catch(e){} syncBadge('✓ 저장됨 · 시트에 올리는 중','busy'); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,120); }
 function syncNow(){ if(syncBusy){syncAgain=true;return;} syncBusy=true; syncAgain=false;
-  const done=(ok,msg)=>{ syncBusy=false; if(syncAgain){syncNow();return;} if(ok){ try{localStorage.removeItem(DIRTY);}catch(e){} syncBadge('✓ 시트에 저장됨','ok'); } else { syncBadge('⚠️ 저장 실패 · 다시 시도 중','bad'); toast('시트 저장 실패'+(msg?': '+msg:'')+' — 30초 뒤 다시 시도해요'); setTimeout(()=>{ if(localStorage.getItem(DIRTY)) syncNow(); },30000); } };
-  try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:V.adminKey,state:Object.assign({},S,{groups:S.groups.filter(x=>!x.demo)})})}).then(r=>r.json()).then(j=>done(!(j&&j.error),j&&j.error)).catch(()=>done(false,'연결 끊김'));}catch(e){done(false);} }
+  const done=(ok,msg)=>{ syncBusy=false; if(syncAgain){syncNow();return;} if(ok){ try{localStorage.removeItem(DIRTY);}catch(e){} syncBadge('✓ 시트까지 저장 완료','ok'); } else { syncBadge('⚠️ 저장 실패 · 다시 시도 중','bad'); toast('시트 저장 실패'+(msg?': '+msg:'')+' — 30초 뒤 다시 시도해요'); setTimeout(()=>{ if(localStorage.getItem(DIRTY)) syncNow(); },30000); } };
+  const br=localStorage.getItem(KEY+'-rev'); const payload={key:V.adminKey,state:Object.assign({},S,{groups:S.groups.filter(x=>!x.demo)})}; if(br!=null) payload.baseRev=+br;
+  try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)}).then(r=>r.json()).then(j=>{
+    if(j&&j.stale){ syncBusy=false; syncAgain=false; try{localStorage.removeItem(DIRTY);}catch(e){} pullMsg=true; pullAll().then(()=>{pullMsg=false; syncBadge('⚠️ 다른 화면 내용으로 바뀜','bad'); toast('다른 기기·창에서 먼저 저장된 내용이 있어서 최신으로 불러왔어요. 방금 고친 건 한 번 더 해 주세요',6000);}); return; }
+    if(j&&j.rev!=null){ try{localStorage.setItem(KEY+'-rev',String(j.rev));}catch(e){} }
+    done(!(j&&j.error),j&&j.error);}).catch(()=>done(false,'연결 끊김'));}catch(e){done(false);} }
 window.addEventListener('beforeunload',e=>{ if(syncBusy||localStorage.getItem(DIRTY)&&syncTimer){ e.preventDefault(); e.returnValue=''; } });
 function pushResponse(g,r){ try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({form:g.id,response:r})}).then(x=>x.json()).then(j=>{if(j&&j.closed&&j.error){g.form.open=false;g.form.responses=g.form.responses.filter(x=>x.id!==r.id);V.formDone=null;saveView();render();toast('방금 마감되어 신청이 접수되지 않았어요');}else if(j&&j.error)toast('신청 전달 실패: '+j.error);else if(j&&j.closed){g.form.open=false;render();}}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
 async function refreshFormStatus(g){ if(!canFetch()) return; try{const r=await fetch(S.seller.syncUrl+'?form='+encodeURIComponent(g.id)); const j=await r.json(); if(j&&j.group&&j.group.form){const wasOpen=formOpen(g); g.form.open=!!j.group.form.open; g.form.responses=j.group.form.responses||g.form.responses; if(wasOpen!==formOpen(g)) render();}}catch(e){} }
@@ -2143,7 +2148,7 @@ const BOOT=(async()=>{
     const dAge=Date.now()-(+localStorage.getItem(DIRTY)||0); if(localStorage.getItem(DIRTY)&&dAge>=10*60*1000){ try{localStorage.removeItem(DIRTY);}catch(e){} }
     if(V.adminKey&&localStorage.getItem(DIRTY)&&dAge<10*60*1000&&localStorage.getItem(PULLED)===V.adminKey){ toast('저장 안 끝난 변경사항을 시트에 올리고 있어요'); syncBadge('☁️ 저장 중…','busy'); syncNow(); return; }
     if(V.adminKey){ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json();
-      if(j&&j.groups){ S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=g.members.map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(PULLED,V.adminKey);}catch(e){} render(); toast('구글 시트에서 불러왔어요'); } else if(j&&j.error){ toast('시트 불러오기 실패: '+j.error); } }
+      if(j&&j.groups){ const rv=j.rev; delete j.rev; S=j; S.seller=Object.assign(baseState().seller,S.seller||{}); S.groups.forEach(g=>{migrateSteps(g);g.members=g.members.map(m=>Object.assign(blankMember(),m));}); try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(PULLED,V.adminKey);if(rv!=null)localStorage.setItem(KEY+'-rev',String(rv));}catch(e){} render(); toast('구글 시트에서 불러왔어요'); } else if(j&&j.error){ toast('시트 불러오기 실패: '+j.error); } }
   }catch(e){ if(LOADING){ LOADING=false; LOADFAIL=true; render(); } }
 })();
 BOOT.finally(()=>{ if(!personal&&!formView){ addDemoIfNeeded(); tryImportSeed(); } });
@@ -2181,7 +2186,7 @@ document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
 
 /* 새 버전 자동 반영: 폰·깃허브가 예전 파일을 기억하고 있으면 최신 파일로 한 번 새로고침 */
-(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑥';
+(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑧';
   fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{ const m=t.match(/버전 [0-9.]+-[①-⑳]/); const ord=v=>{const x=v.match(/([0-9]+)\.([0-9]+)-(.)/);return x?(+x[1])*10000+(+x[2])*100+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(x[3])+1):0;}; if(!m||ord(m[0])<=ord(MY)) return;
     const k='gongu-verjump-'+m[0]; try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1'); }catch(e){}
     location.replace(location.pathname+'?v='+Date.now()+location.hash); }).catch(()=>{}); })();
