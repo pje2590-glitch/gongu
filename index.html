@@ -514,10 +514,11 @@ body{padding:0!important}
 .items .it input{min-width:0;width:100%}
 .items .it .x{grid-row:2;grid-column:5}
 .it-h{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 32px;gap:4px;padding:0 9px;font-size:11px;color:var(--muted);margin-top:6px}
+.prow .sm.ex2{grid-column:1/-1;background:var(--cvs-bg);color:var(--ink);border-radius:8px;padding:6px 8px;margin-top:4px}.pill.ex2p{background:var(--cvs);color:#fff;font-size:11px;padding:1px 7px;border-radius:6px;font-weight:700}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑤</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑥</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -1249,7 +1250,7 @@ ${subtabs('status',[{id:'main',t:'현황·진행',c:'yellow'},{id:'close',t:'공
           <div class="prow c mrow" data-m="${m.id}">
             <div class="nm">${esc(m.name)}</div>
             <div class="amt num">${won(s1(m))}${g.stage2Open?` <span class="muted" style="font-size:11px;font-weight:400">+${won(s2(m))}</span>`:''}</div>
-            <div class="sm it">${m.items.map(i=>`${esc(i.n)} <b>×${i.q}</b>`).join(' · ')||'<span class="muted">구매 내역 없음</span>'}</div>
+            <div class="sm it">${m.items.map(i=>`${esc(i.n)} <b>×${i.q}</b>`).join(' · ')||'<span class="muted">구매 내역 없음</span>'}</div>${(m.extra2||[]).length?`<div class="sm ex2"><span class="pill ex2p">2차 추가</span> ${m.extra2.map(i=>`${esc(i.n)} <b>×${i.q}</b>`).join(' · ')} <span class="muted">· ${won(ex2Sum(m))}</span></div>`:''}
             <div class="tools"><span class="sts">${ck(paid1(m),'1차')}${ck(g.stage2Open?paid2(m):null,'2차')}${ck(hasAddr(m),'배송지')}${rfAmt(m)>0?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불'):''}</span></div>
             <div class="tools" style="justify-content:flex-end;margin-top:2px"><button class="btn s" data-link="${m.id}">🔗 링크</button><button class="btn s" data-edit="${m.id}">수정</button><button class="btn s danger" data-del="${m.id}">삭제</button></div>
           </div>`;}).join('')}
@@ -2180,7 +2181,7 @@ document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
 
 /* 새 버전 자동 반영: 폰·깃허브가 예전 파일을 기억하고 있으면 최신 파일로 한 번 새로고침 */
-(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑤';
+(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑥';
   fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{ const m=t.match(/버전 [0-9.]+-[①-⑳]/); const ord=v=>{const x=v.match(/([0-9]+)\.([0-9]+)-(.)/);return x?(+x[1])*10000+(+x[2])*100+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(x[3])+1):0;}; if(!m||ord(m[0])<=ord(MY)) return;
     const k='gongu-verjump-'+m[0]; try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1'); }catch(e){}
     location.replace(location.pathname+'?v='+Date.now()+location.hash); }).catch(()=>{}); })();
