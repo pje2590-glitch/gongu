@@ -511,7 +511,7 @@ body{padding:0!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.24-⑤</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-①</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -870,7 +870,7 @@ function renderMember(g){
   if(personal&&rfGone(m)) return `<div class="card" style="text-align:center;padding:34px 18px"><div style="font-size:34px">🗂️</div><h2 style="border:0">정산서가 삭제되었어요</h2><p class="help">주문하신 상품이 모두 환불 완료되어, 환불 24시간 뒤 정산서가 삭제되었어요.<br>문의는 ${esc(nickOf(g))}에게 해 주세요. 참여해 주셔서 감사합니다 💛</p></div>`;
   const p1=paid1(m), rem1=r1(m), p2=paid2(m), rem2=r2(m), addrOk=hasAddr(m);
   const trackUrl=m.tracking?(m.delivery==='convenience'?GS_TRACK(m.tracking.replace(/\D/g,'')):(TRACK[g.courier]||TRACK['CJ대한통운'])(m.tracking.replace(/\D/g,''))):'';
-  const showRf=!!(g.refundOpen&&rfAmt(m)>0);
+  const showRf=rfAmt(m)>0&&(g.refundOpen||(personal&&g.refundOpen===undefined));
   if(!(fullRf(m)?['s1','progress']:['s1','s2','progress','addr']).concat(showRf?['rf']:[]).includes(V.tabM)) V.tabM=showRf&&fullRf(m)&&!m.refundDone?'rf':'s1';
   const T=V.tabM;
   const ck=(ok,label,sub,tab)=>`<div class="ck ${ok===null?'':ok?'ok':'no'}" ${tab&&!ok?`data-tab="m:${tab}"`:''}><span class="mark">${ok===null?'⏳':ok?'✅':'❌'}</span><span class="lb">${label}</span><span class="sb">${sub}</span></div>`;
