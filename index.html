@@ -517,7 +517,7 @@ body{padding:0!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-③</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-④</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -2168,6 +2168,12 @@ document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 /* 두 손가락 확대·더블탭 확대 막기 */
 ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
+
+/* 새 버전 자동 반영: 폰·깃허브가 예전 파일을 기억하고 있으면 최신 파일로 한 번 새로고침 */
+(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-④';
+  fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{ const m=t.match(/버전 [0-9.]+-[①-⑳]/); const ord=v=>{const x=v.match(/([0-9]+)\.([0-9]+)-(.)/);return x?(+x[1])*10000+(+x[2])*100+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(x[3])+1):0;}; if(!m||ord(m[0])<=ord(MY)) return;
+    const k='gongu-verjump-'+m[0]; try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1'); }catch(e){}
+    location.replace(location.pathname+'?v='+Date.now()+location.hash); }).catch(()=>{}); })();
 </script>
 
 </div></body>
