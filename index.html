@@ -666,7 +666,12 @@ const r1=m=>Math.max(0,s1(m)-(m.paid1||0));
 const dom=m=>DOMESTIC[m.delivery]||DOMESTIC.normal;
 const dcls=m=>m.delivery==='convenience'?'cvs':'visit';
 const dpill=m=>`<span class="pill ${dcls(m)}">${esc(dom(m).t)}</span>`;
-const s2=m=>(+m.overseas||0)+dom(m).fee;
+const ex2Sum=m=>(m.extra2||[]).reduce((a,i)=>a+(+i.q||0)*((+i.p||0)+(+i.fee||0)),0);
+const s2=m=>(+m.overseas||0)+dom(m).fee+ex2Sum(m);
+const rfItems=m=>(m.items||[]).filter(i=>(+i.rf||0)>0);
+const rfAmt=m=>rfItems(m).reduce((a,i)=>a+Math.min(+i.rf||0,+i.q||0)*((+i.p||0)+(+i.fee||0)),0);
+const rfFee=m=>rfItems(m).reduce((a,i)=>a+Math.min(+i.rf||0,+i.q||0)*(+i.fee||0),0);
+const rfHasAcct=m=>!!(m.refundBank&&m.refundAcct&&m.refundHolder);
 /* 공구 배송비 방식(공구 단위): 'ov' 해외 구매 → 해외배송비 1/n, 수고비 없음 / 'fee' 매장 직접 구매 → 수고비, 해외배송비 없음 */
 const gKind=g=>g&&g.shipKind==='fee'?'fee':'ov';
 const isFeeG=g=>gKind(g)==='fee';
@@ -837,7 +842,8 @@ function renderMember(g){
   V.mid=m.id; saveView();
   const p1=paid1(m), rem1=r1(m), p2=paid2(m), rem2=r2(m), addrOk=hasAddr(m);
   const trackUrl=m.tracking?(m.delivery==='convenience'?GS_TRACK(m.tracking.replace(/\D/g,'')):(TRACK[g.courier]||TRACK['CJ대한통운'])(m.tracking.replace(/\D/g,''))):'';
-  if(!['s1','s2','progress','addr'].includes(V.tabM)) V.tabM='s1';
+  const showRf=!!(g.refundOpen&&rfAmt(m)>0);
+  if(!['s1','s2','progress','addr'].concat(showRf?['rf']:[]).includes(V.tabM)) V.tabM='s1';
   const T=V.tabM;
   const ck=(ok,label,sub)=>`<div class="ck ${ok===null?'':ok?'ok':'no'}"><span class="mark">${ok===null?'⏳':ok?'✅':'❌'}</span><span class="lb">${label}</span><span class="sb">${sub}</span></div>`;
   const notice=`<div class="notice">${esc(S.notice)}</div>`;
@@ -851,9 +857,10 @@ function renderMember(g){
         ${ck(p1,'1차 정산',p1?'입금 확인':(m.paid1>0?won(rem1)+' 남음':'입금 전'))}
         ${ck(g.stage2Open?p2:null,'2차 정산',!g.stage2Open?'준비 중':p2?'입금 확인':(m.paid2>0?won(rem2)+' 남음':'입금 전'))}
         ${ck(addrOk,'배송지 입력',addrOk?dom(m).t:'아직 안 함')}
+        ${showRf?ck(m.refundDone?true:rfHasAcct(m)?null:false,'환불',m.refundDone?'환불 완료':rfHasAcct(m)?'환불 대기':'계좌 입력 필요'):''}
       </div>
     </div>
-    ${tabs([{id:'s1',t:'1차 정산서'},{id:'s2',t:'2차 정산서'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력'}],T,'m')}
+    ${tabs([{id:'s1',t:'1차 정산서'}].concat(showRf?[{id:'rf',t:'환불'}]:[],[{id:'s2',t:'2차 정산서'},{id:'progress',t:'진행 상황'},{id:'addr',t:'배송지 입력'}]),T,'m')}
 
     <div ${T!=='s1'?'hidden':''} class="panel">
       <div class="receipt" id="receiptEl1">
@@ -874,6 +881,30 @@ function renderMember(g){
       <p class="help keep">공구가 마무리되면 이 정산서는 더 이상 열리지 않아요. 보관하시려면 💾 이미지로 저장하거나 화면을 캡처해 두세요.</p>
     </div>
 
+    ${showRf?`<div ${T!=='rf'?'hidden':''} class="panel">
+      <div class="receipt" id="receiptElRf">
+        ${head('환불 정산서')}
+        <div class="stage">
+          <div class="hd"><b>환불 · 구매하지 못한 상품</b></div>
+          ${rfItems(m).map(i=>{const k=Math.min(+i.rf||0,+i.q||0);return `<div class="line item"><span><span class="nm">${esc(i.n)}</span><span class="q">${k}개${i.fx?' · '+esc(fxNote(g,i)):''}${+i.fee?' · 수고비 '+(+i.fee).toLocaleString('ko-KR')+'원':''}</span></span><span class="num">${(k*((+i.p||0)+(+i.fee||0))).toLocaleString('ko-KR')}원</span></div>`;}).join('')}
+          ${rfFee(m)?`<div class="line sub"><span>수고비 환불</span><span class="num">${rfFee(m).toLocaleString('ko-KR')}원</span></div>`:''}
+          <div class="line total"><span>환불 합계</span><span class="num">${won(rfAmt(m))}</span></div>
+        </div>
+        ${m.refundDone?`<div class="grand paid"><span>환불이 완료되었습니다</span><span>💛</span></div>`:`<div class="grand due"><span>돌려받으실 금액</span><span class="num">${won(rfAmt(m))}</span></div>`}
+        <div class="notice">현지에서 구매하지 못한 상품이에요. 낸 금액(수고비 포함) 그대로 돌려드려요.</div>
+        ${rfHasAcct(m)?`<div class="acctbox"><div class="row between"><span class="pill ok">${esc(m.refundBank)}</span><span class="muted" style="font-size:13px">예금주 ${esc(m.refundHolder)}</span></div><div class="acct"><div class="n num">${esc(m.refundAcct)}</div></div><div class="band" style="margin-top:6px">${m.refundDone?'이 계좌로 환불했어요.':'이 계좌로 환불해 드릴게요.'}</div></div>`:''}
+      </div>
+      ${m.refundDone?'':`<div class="card" style="margin-top:12px"><h2>${rfHasAcct(m)?'환불 계좌 수정':'환불 받을 계좌'}</h2>
+        <form id="rfForm" ${rfHasAcct(m)?'hidden':''}>
+          <div class="grid2"><label class="f">은행<input id="rf_bank" value="${esc(m.refundBank||'')}" placeholder="예: 카카오뱅크" required></label><label class="f">예금주<input id="rf_holder" value="${esc(m.refundHolder||'')}" placeholder="실명" required></label></div>
+          <label class="f" style="margin-top:8px">계좌번호<input id="rf_acct" value="${esc(m.refundAcct||'')}" inputmode="numeric" placeholder="- 없이 숫자만" required></label>
+          <div class="row end" style="margin-top:10px"><button class="btn p" type="submit">환불 계좌 보내기</button></div>
+        </form>
+        ${rfHasAcct(m)?`<div class="row end"><button class="btn s" id="rfEdit">계좌 수정</button></div>`:''}
+      </div>`}
+      <div class="row"><button class="btn" data-saveimg="receiptElRf" data-title="환불정산서">💾 이미지로 저장</button></div>
+    </div>`:''}
+
     <div ${T!=='s2'?'hidden':''} class="panel">
       <div class="receipt" id="receiptEl2">
         ${head('2차 정산서')}
@@ -884,6 +915,7 @@ function renderMember(g){
           ${isFeeG(g)&&!(+m.overseas)?`<div class="line sub"><span>해외배송비</span><span class="num">없음</span></div>`
           :`<div class="line item"><span><span class="nm">해외배송비</span><span class="q">${cartName(g,m.cart||0)||'배대지 → 한국'}</span></span><span class="num">${(+m.overseas||0).toLocaleString('ko-KR')}원</span></div>`}
           <div class="line item"><span><span class="nm">국내배송비</span><span class="q">${esc(dom(m).t)}</span></span><span class="num">${dom(m).fee.toLocaleString('ko-KR')}원</span></div>
+          ${(m.extra2||[]).length?`<div class="hd" style="margin-top:10px"><b>추가 구매 상품</b></div>${m.extra2.map(i=>`<div class="line item"><span><span class="nm">${esc(i.n)}</span><span class="q">${i.q}개${i.fx?' · '+esc(fxNote(g,i)):''}${+i.fee?' · 수고비 '+(+i.fee).toLocaleString('ko-KR')+'원':''}</span></span><span class="num">${((+i.q||0)*((+i.p||0)+(+i.fee||0))).toLocaleString('ko-KR')}원</span></div>`).join('')}`:''}
           <div class="line total"><span>2차 합계</span><span class="num">${won(s2(m))}</span></div>
           <div class="line sub"><span>받은 금액</span><span class="num">-${(m.paid2||0).toLocaleString('ko-KR')}원</span></div>`
           :isFeeG(g)?`<div class="closed">매장 직접 구매 공구라 해외배송비는 없어요. 2차에서는 국내배송비만 정산되며, 준비되면 따로 안내드릴게요.</div>`
@@ -1192,7 +1224,7 @@ ${subtabs('status',[{id:'main',t:'현황·진행',c:'yellow'},{id:'close',t:'공
     </div>
 
     <div ${T!=='pay'?'hidden':''} class="panel">
-${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).length||''},{id:'p2',t:'2차 입금',n:g.stage2Open?(g.members.filter(m=>!paid2(m)).length||''):''},{id:'match',t:'자동 대조'},{id:'ship2',t:'배송비 계산',c:'yellow'}])}
+${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).length||''},{id:'rf',t:'환불',n:g.members.filter(m=>rfAmt(m)>0&&!m.refundDone).length||''},{id:'p2',t:'2차 입금',n:g.stage2Open?(g.members.filter(m=>!paid2(m)).length||''):''},{id:'match',t:'자동 대조'},{id:'ship2',t:'배송비 계산',c:'yellow'}])}
     <div class="subpanel yellow" ${sub('pay','ship2')?'':'hidden'}>
       <div class="card">
         <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">배송비 계산</h2><label class="sw"><input type="checkbox" id="stage2Open" ${g.stage2Open?'checked':''}> 참여자에게 공개</label></div>
@@ -1231,6 +1263,29 @@ ${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).lengt
           </div>`).join('')||'<p class="help">참여자가 없어요</p>'}
         </div>
       </div>
+    </div><div class="subpanel" ${sub('pay','rf')?'':'hidden'}>
+      ${(()=>{const byN={};g.members.forEach(m=>(m.items||[]).forEach((i,k)=>{if(!i.n)return;(byN[i.n]=byN[i.n]||[]).push({m,i,k});}));
+        const tgt=g.members.filter(m=>rfAmt(m)>0), tot=tgt.reduce((a,m)=>a+rfAmt(m),0), done=tgt.filter(m=>m.refundDone), noAcct=tgt.filter(m=>!m.refundDone&&!rfHasAcct(m));
+        return `<div class="card">
+        <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">환불 대상</h2><label class="sw"><input type="checkbox" id="refundOpen" ${g.refundOpen?'checked':''}> 참여자에게 공개</label></div>
+        ${tgt.length?`<div class="band ${done.length===tgt.length?'':'bad'}" style="margin-bottom:10px">환불 ${tgt.length}명 · ${won(tot)} · 완료 ${done.length}명${noAcct.length?' · 계좌 미입력 '+noAcct.length+'명':''}${tgt.length-done.length?' · 남은 금액 '+won(tgt.filter(m=>!m.refundDone).reduce((a,m)=>a+rfAmt(m),0)):''}</div>`:`<div class="band" style="background:var(--soft);color:var(--muted);margin-bottom:10px">아래에서 못 산 상품을 체크하면 환불 대상이 여기에 떠요.</div>`}
+        <div class="row end" style="margin-bottom:8px"><button class="btn s" id="rfPull">↻ 참여자가 보낸 계좌 불러오기</button></div>
+        <div class="plist">${[...tgt].sort((a,b)=>(a.refundDone?1:0)-(b.refundDone?1:0)).map(m=>`
+          <div class="prow c ${m.refundDone?'':'alert'}">
+            <div class="nm">${esc(m.name)}</div><div class="amt num">${won(rfAmt(m))}</div>
+            <div class="sm">${rfItems(m).map(i=>esc(i.n)+' ×'+Math.min(+i.rf||0,+i.q||0)).join(' · ')}</div>
+            <div class="sm">${rfHasAcct(m)?`🏦 <b>${esc(m.refundBank)} ${esc(m.refundAcct)}</b> · ${esc(m.refundHolder)}`:'<span class="muted">계좌 아직 안 보냄</span>'}</div>
+            <div class="tools">${rfHasAcct(m)?`<button class="btn s" data-copy="${esc(m.refundBank+' '+String(m.refundAcct).replace(/[^0-9]/g,''))}" data-label="은행·계좌">계좌 복사</button>`:''}<button class="btn s" data-copy="${rfAmt(m)}" data-label="환불 금액">${won(rfAmt(m))} 복사</button>${m.refundDone?`<span class="pill ok">✅ 환불 완료</span><button class="btn s" data-rfundo="${m.id}">취소</button>`:`<button class="btn s p" data-rfdone="${m.id}">환불 완료</button>`}<button class="btn s" data-link="${m.id}">🔗 링크</button></div>
+          </div>`).join('')}</div>
+      </div>
+      <div class="card">
+        <h2>품목별 구매 체크</h2>
+        <p class="help">현지에서 못 산 상품을 ❌로 바꾸세요. 그 사람 환불 정산서에 <b>상품값 + 수고비</b>가 자동으로 들어가요. 1차 정산서는 그대로예요.</p>
+        ${Object.keys(byN).map(n=>{const L=byN[n], q=L.reduce((a,x)=>a+(+x.i.q||0),0), f=L.reduce((a,x)=>a+Math.min(+x.i.rf||0,+x.i.q||0),0);return `
+        <div class="grp" style="margin-top:10px"><div class="row between"><div><b>${esc(n)}</b> <span class="muted" style="font-size:12px">주문 ${q}개${f?` · <span style="color:var(--bad)">못 삼 ${f}개</span>`:' · 전부 구매'}</span></div>
+          <span class="row" style="gap:4px"><button class="btn s" data-rfall="${esc(n)}" data-v="0">전부 ✅</button><button class="btn s" data-rfall="${esc(n)}" data-v="1">전부 ❌</button></span></div>
+          <div class="plist" style="margin-top:6px">${L.map(x=>`<div class="match"><span>${esc(x.m.name)} <span class="muted">×${x.i.q}</span></span><select data-rf="${x.m.id}:${x.k}" style="width:auto;padding:4px 8px;font-size:14px">${Array.from({length:(+x.i.q||0)+1},(_,r)=>`<option value="${r}" ${Math.min(+x.i.rf||0,+x.i.q||0)===r?'selected':''}>${r===0?'✅ 구매함':r===(+x.i.q||0)?'❌ 못 삼':'❌ '+r+'개 못 삼'}</option>`).join('')}</select></div>`).join('')}</div></div>`;}).join('')||'<p class="help">구매 내역이 없어요</p>'}
+      </div>`;})()}
     </div><div class="subpanel" ${sub('pay','p2')?'':'hidden'}>
       <div class="card">
         <h2>2차 입금 · 배송비</h2>
@@ -1239,7 +1294,7 @@ ${subtabs('pay',[{id:'p1',t:'1차 입금',n:g.members.filter(m=>!paid1(m)).lengt
           ${[...g.members].sort((a,b)=>(paid2(a)?1:0)-(paid2(b)?1:0)).map(m=>`
           <div class="prow c ${g.stage2Open&&!paid2(m)?'alert':''}">
             <div class="nm">${esc(m.name)}${g.carts.length>1?` <span class="muted" style="font-weight:400;font-size:12px">${cartName(g,m.cart||0)}</span>`:''}</div><div class="amt num">${won(s2(m))}</div>
-            <div class="sm">${isFeeG(g)&&!(+m.overseas)?'해외배송비 없음(수고비 공구) + ':'해외배송비 '+won(+m.overseas||0)+' + '}국내 ${won(dom(m).fee)} <span class="muted">(${esc(dom(m).t)})</span></div>
+            <div class="sm">${isFeeG(g)&&!(+m.overseas)?'해외배송비 없음(수고비 공구) + ':'해외배송비 '+won(+m.overseas||0)+' + '}국내 ${won(dom(m).fee)} <span class="muted">(${esc(dom(m).t)})</span>${ex2Sum(m)?` + 추가 상품 ${won(ex2Sum(m))}`:''}</div>
             <div class="tools">${r2(m)?`<span class="pill no">${won(r2(m))} 남음</span><button class="btn s p" data-paid2="${m.id}">전액 확인</button><input data-part2="${m.id}" inputmode="numeric" placeholder="부분 입금액" value="${m.paid2||''}">`:`<span class="pill ok">✅ 입금 확인</span><button class="btn s" data-un2="${m.id}">취소</button>`}</div>
           </div>`).join('')||'<p class="help">참여자가 없어요</p>'}
         </div>
@@ -1401,6 +1456,8 @@ function bind(){
   const dof=document.getElementById('demoOff'); if(dof) dof.onclick=()=>{S.groups=S.groups.filter(x=>!x.demo);try{localStorage.setItem(DEMO_FLAG,'1');}catch(e){}V.gid=null;save();render();toast('예시 공구를 지웠어요');};
   const ea=document.getElementById('editAddr'); if(ea) ea.onclick=()=>{document.getElementById('addrForm').hidden=false;ea.hidden=true;};
   const ad=document.getElementById('a_delivery'); if(ad) ad.onchange=()=>{document.getElementById('a_home').hidden=ad.value!=='normal';document.getElementById('a_cvsbox').hidden=ad.value!=='convenience';};
+  const rff=document.getElementById('rfForm'); if(rff&&m) rff.onsubmit=e=>{e.preventDefault();const b=v('rf_bank'),a=v('rf_acct').replace(/[^0-9-]/g,''),h=v('rf_holder');if(!b||!a||!h){toast('은행·계좌번호·예금주를 모두 넣어 주세요');return;}m.refundBank=b;m.refundAcct=a;m.refundHolder=h;m.rfAt=now();pushRefund(m);render();};
+  const rfe=document.getElementById('rfEdit'); if(rfe) rfe.onclick=()=>{rfe.parentElement.hidden=true;document.getElementById('rfForm').hidden=false;};
   const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();if(hasAddr(m)&&addrDuePast(g)){toast('배송지 수정 기한이 지났어요');return;}const nd=dlvLocked(g,m)?m.delivery:v('a_delivery');if(nd!=='normal'&&nd!=='convenience'){toast('배송 방법을 골라 주세요');return;}if(g.stage2Open&&!dlvLocked(g,m)&&!confirm((nd==='convenience'?'편의점택배 2,500원':'일반택배 4,000원')+'으로 정할까요?\n저장하면 배송 방법은 바꿀 수 없어요.'))return;m.name=v('a_name');m.phone=v('a_phone');m.delivery=nd;if(m.delivery==='convenience'){m.cvs=v('a_cvs');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
   app.querySelectorAll('[data-proof]').forEach(op=>op.onclick=()=>openModal(`<div class="row between"><h2 class="t" style="font-size:19px">📎 증빙 서류 (${g.photos.length}장)</h2><button class="btn s" data-close>닫기</button></div>${g.photos.map(p=>`<figure class="pic"><img src="${p.data}" alt="${esc(p.name)}"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}<div class="row end" style="margin-top:10px"><button class="btn" data-close>닫기</button></div>`));
   app.querySelectorAll('[data-saveimg]').forEach(si=>si.onclick=async()=>{
@@ -1454,6 +1511,12 @@ function bind(){
   ['gTitle','gNick','gDate'].forEach(id=>{const e=document.getElementById(id); if(e) e.onchange=()=>{g.title=v('gTitle')||g.title;g.nick=v('gNick');g.date=v('gDate')||g.date;save();render();toast('저장했어요');};});
   app.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{const i=+b.dataset.step;g.step=i;if(!g.history.find(h=>h.step===i))g.history.push({step:i,at:now(),memo:''});g.history=g.history.filter(h=>h.step<=i);save();render();});
   const ns=document.getElementById('nextStep'); if(ns) ns.onclick=()=>{if(g.step>=STEPS.length-1)return;g.step++;g.history.push({step:g.step,at:now(),memo:v('stepMemo')});save();render();toast(`${STEPS[g.step].t} 단계로 바뀌었어요. 알림 탭 문구가 갱신됐습니다`);};
+  const rfo=document.getElementById('refundOpen'); if(rfo) rfo.onchange=()=>{g.refundOpen=rfo.checked;save();render();toast(g.refundOpen?'환불 정산서를 참여자에게 공개했어요':'환불 정산서를 숨겼어요');};
+  app.querySelectorAll('[data-rf]').forEach(sl=>sl.onchange=()=>{const [mid,k]=sl.dataset.rf.split(':');const x=M(mid);if(!x)return;const it=x.items[+k];if(!it)return;it.rf=+sl.value||0;save();render();});
+  app.querySelectorAll('[data-rfall]').forEach(b=>b.onclick=()=>{const n=b.dataset.rfall, v=b.dataset.v==='1';g.members.forEach(x=>(x.items||[]).forEach(it=>{if(it.n===n)it.rf=v?(+it.q||0):0;}));save();render();});
+  app.querySelectorAll('[data-rfdone]').forEach(b=>b.onclick=()=>{const x=M(b.dataset.rfdone);x.refundDone=true;x.refundAt=now();save();render();});
+  app.querySelectorAll('[data-rfundo]').forEach(b=>b.onclick=()=>{const x=M(b.dataset.rfundo);x.refundDone=false;x.refundAt='';save();render();});
+  const rfp=document.getElementById('rfPull'); if(rfp) rfp.onclick=()=>pullSelfFields(true);
   app.querySelectorAll('[data-paid1]').forEach(b=>b.onclick=()=>{const x=M(b.dataset.paid1);x.paid1=s1(x);save();render();});
   app.querySelectorAll('[data-un1]').forEach(b=>b.onclick=()=>{M(b.dataset.un1).paid1=0;save();render();});
   app.querySelectorAll('[data-part1]').forEach(i=>i.onchange=()=>{M(i.dataset.part1).paid1=+String(i.value).replace(/\D/g,'')||0;save();render();});
@@ -1574,6 +1637,7 @@ async function addPhotos(g,files){
 function shrink(file,max,q){return new Promise((res,rej)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{const r=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*r);c.height=Math.round(img.height*r);c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q));};img.onerror=rej;img.src=url;});}
 
 function editMember(g,m,isNew){
+  const snap=JSON.stringify(SELF_F.map(k=>m[k]));
   const row=document.querySelector(`.prow[data-m="${m.id}"]`)||document.querySelector('.plist');
   const box=document.createElement('div');box.className='card';box.style.border='2px solid var(--ok-strong)';
   const draw=()=>{box.innerHTML=`
@@ -1587,14 +1651,20 @@ function editMember(g,m,isNew){
     <p class="help" style="margin:10px 0 4px">구매 내역: 상품명 · 수량 · 현지가(${sym1(g)}) · 개당 원화 · 수고비(매장 직접 구매 시). 현지가를 넣으면 원화는 <b>현지가 × ${g.rate}</b>로 자동 계산되고 정산서에 계산식이 보입니다.</p>
     <div class="items">${m.items.map((i,k)=>`<div class="it"><input data-k="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-k="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-k="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-k="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-k="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-rm="${k}">×</button></div>`).join('')}</div>
     <div class="row" style="margin-top:8px"><button class="btn s" id="e_add">+ 상품 추가</button><span class="muted" style="font-size:13px">1차 합계 <b class="num">${won(s1(m))}</b></span></div>
+    <p class="help" style="margin:14px 0 4px"><b>2차에 추가로 받을 상품</b> · 현지에서 추가로 산 물건 등. 2차 정산서에 "추가 구매 상품"으로 들어가요.</p>
+    <div class="items">${(m.extra2||[]).map((i,k)=>`<div class="it"><input data-x="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명"><input data-x="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-x="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-x="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-x="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-xrm="${k}">×</button></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button class="btn s" id="e_xadd">+ 2차 추가 상품</button>${ex2Sum(m)?`<span class="muted" style="font-size:13px">추가 상품 합계 <b class="num">${won(ex2Sum(m))}</b></span>`:''}</div>
     <div class="row end" style="margin-top:10px"><button class="btn s" id="e_cancel">닫기</button><button class="btn p" id="e_save">저장</button></div>`;
     const pull=()=>{m.name=box.querySelector('#e_name').value.trim();m.phone=box.querySelector('#e_phone').value.trim();m.zip=box.querySelector('#e_zip').value.trim();m.delivery=box.querySelector('#e_dlv').value;m.addr=box.querySelector('#e_addr').value.trim();m.addr2=box.querySelector('#e_addr2').value.trim();m.box=box.querySelector('#e_box').value;m.cart=+box.querySelector('#e_cart').value||0;m.memo=box.querySelector('#e_memo').value.trim();m.cvs=box.querySelector('#e_cvs').value.trim();
-      box.querySelectorAll('.it input').forEach(i=>{const it=m.items[+i.dataset.k];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.items.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});};
+      box.querySelectorAll('.it input[data-k]').forEach(i=>{const it=m.items[+i.dataset.k];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.items.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});
+      m.extra2=m.extra2||[]; box.querySelectorAll('.it input[data-x]').forEach(i=>{const it=m.extra2[+i.dataset.x];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.extra2.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});};
     box.querySelectorAll('.it input').forEach(i=>i.onchange=()=>{pull();draw();});
     box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{pull();m.items.splice(+b.dataset.rm,1);draw();});
     box.querySelector('#e_add').onclick=()=>{pull();m.items.push({n:'',q:1,p:0,fx:0,fee:0});draw();};
+    box.querySelector('#e_xadd').onclick=()=>{pull();(m.extra2=m.extra2||[]).push({n:'',q:1,p:0,fx:0,fee:0});draw();};
+    box.querySelectorAll('[data-xrm]').forEach(b=>b.onclick=()=>{pull();m.extra2.splice(+b.dataset.xrm,1);draw();});
     box.querySelector('#e_cancel').onclick=()=>{if(isNew&&!m.name){g.members=g.members.filter(x=>x!==m);save();}render();};
-    box.querySelector('#e_save').onclick=()=>{pull();if(!m.name){toast('이름을 입력해 주세요');return;}m.items=m.items.filter(i=>i.n);if(!m.items.length)m.items=[{n:'(상품 미정)',q:1,p:0,fx:0,fee:0}];distribute(g);save();render();toast('저장했어요');};
+    box.querySelector('#e_save').onclick=()=>{pull();if(!m.name){toast('이름을 입력해 주세요');return;}if(JSON.stringify(SELF_F.map(k=>m[k]))!==snap)m.selfAt=now();m.extra2=(m.extra2||[]).filter(i=>i.n);m.items=m.items.filter(i=>i.n);if(!m.items.length)m.items=[{n:'(상품 미정)',q:1,p:0,fx:0,fee:0}];distribute(g);save();render();toast('저장했어요');};
   };
   draw();row.after(box);box.querySelector('#e_name').focus();
 }
@@ -1991,6 +2061,16 @@ function pushResponse(g,r){ try{fetch(S.seller.syncUrl,{method:'POST',headers:{'
 async function refreshFormStatus(g){ if(!canFetch()) return; try{const r=await fetch(S.seller.syncUrl+'?form='+encodeURIComponent(g.id)); const j=await r.json(); if(j&&j.group&&j.group.form){const wasOpen=formOpen(g); g.form.open=!!j.group.form.open; g.form.responses=j.group.form.responses||g.form.responses; if(wasOpen!==formOpen(g)) render();}}catch(e){} }
 setInterval(()=>{ if(formView){const g=S.groups.find(x=>x.id===formView); if(g&&formOpen(g)) refreshFormStatus(g);} },15000);
 let wasWaiting=null; setInterval(()=>{ const g=G(); if(!g) return; const w=formWaiting(g); if(wasWaiting===true&&w===false) render(); wasWaiting=w; },5000);
+function pushRefund(m){ if(!canFetch()){save();toast('저장했어요');return;} try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({member:m.id,refundBank:m.refundBank,refundAcct:m.refundAcct,refundHolder:m.refundHolder})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('전달 실패: '+j.error);else if(!j||!j.v)toast('전달은 됐지만 공구장 쪽 업데이트가 필요해요. 공구장에게 계좌를 직접 알려 주세요');else toast('환불 계좌가 전달됐어요');}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
+/* 관리자: 시트에서 참여자가 직접 넣은 값(배송지·환불 계좌)만 가져와 합치기 — 다른 내 작업은 건드리지 않음 */
+const SELF_F=['name','phone','zip','addr','addr2','memo','cvs','cvsAddr','delivery','selfAt'], RF_F=['refundBank','refundAcct','refundHolder','rfAt'];
+async function pullSelfFields(manual){ if(!canFetch()||!V.adminKey) { if(manual) toast('구글 시트 연동이 필요해요'); return; }
+  try{ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json(); if(!j||!j.groups){ if(manual) toast('불러오기 실패'); return; }
+    let n=0; j.groups.forEach(rg=>{const lg=S.groups.find(x=>x.id===rg.id); if(!lg) return; (rg.members||[]).forEach(rm=>{const lm=lg.members.find(x=>x.id===rm.id); if(!lm) return;
+      if((rm.selfAt||'')>(lm.selfAt||'')){SELF_F.forEach(k=>{if(rm[k]!==undefined)lm[k]=rm[k];});n++;}
+      if((rm.rfAt||'')>(lm.rfAt||'')){RF_F.forEach(k=>{if(rm[k]!==undefined)lm[k]=rm[k];});n++;} });});
+    try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} render(); if(manual) toast(n?'새로 들어온 내용 '+n+'건을 불러왔어요':'새로 들어온 내용이 없어요');
+  }catch(e){ if(manual) toast('불러오기 실패'); } }
 function pushMember(m){ if(!canFetch()){save();return;} try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({member:m.id,name:m.name,phone:m.phone,zip:m.zip,addr:m.addr,addr2:m.addr2,memo:m.memo,delivery:m.delivery,cvs:m.cvs,cvsAddr:m.cvsAddr})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('전달 실패: '+j.error);else toast('배송지가 전달됐어요');}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
 var LOADING=false, LOADFAIL=false;
 const CK=()=>'gongu-cache-'+(formView?'f-'+formView:'p-'+personal);
