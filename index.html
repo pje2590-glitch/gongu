@@ -519,7 +519,7 @@ body{padding:0!important}
 </style>
 </head>
 <body><div id="scroller">
-<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑨</div>
+<div class="wrap" id="app"></div><div class="ver">버전 11.25-⑪</div>
 <div class="toast" id="toast" hidden></div>
 <div class="modal" id="modal" hidden></div>
 <div id="pcLayer" hidden><div class="pcbox"><div class="row between" style="padding:10px 12px;border-bottom:1px solid var(--line)"><b>🔍 도로명 주소 검색</b><button class="btn s" data-pcclose>닫기</button></div><div id="pcHost"></div></div></div>
@@ -555,7 +555,7 @@ function buildLogiXlsx(rows){
   let body='';
   rows.forEach((m,i)=>{const r=i+3;
     body+=`<row r="${r}" spans="1:11" s="6" customFormat="1">`
-      +col(r,'A',8,i+1)+col(r,'B',9,String(m.name).slice(0,10),1)+col(r,'C',12,String(m.phone).replace(/\D/g,''),1)+col(r,'D',9,'')
+      +col(r,'A',8,i+1)+col(r,'B',9,String(rcvOf(m)).slice(0,10),1)+col(r,'C',12,String(m.phone).replace(/\D/g,''),1)+col(r,'D',9,'')
       +col(r,'E',11,String(m.zip).replace(/\D/g,''),1)+col(r,'F',9,m.addr,1)+col(r,'G',9,m.addr2,1)+col(r,'H',1,m.box||'B',1)
       +col(r,'I',9,String(m.item).slice(0,10),1)+col(r,'J',10,Math.max(1,Math.round((+m.price||0)/10000)))+col(r,'K',9,clean(m.memo).slice(0,30),1)
       +`</row>`;
@@ -753,10 +753,12 @@ const formWaiting=g=>!!(g.form&&g.form.open&&g.form.openAt)&&new Date(g.form.ope
 const formOpen=g=>!!(g.form&&g.form.open)&&!formWaiting(g)&&!formExpired(g)&&!g.closed;
 const fmtOpenAt=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
 const cartName=(g,ci)=>g.carts.length>1?`${ci+1}번 장바구니`:'';
-const addrDuePast=g=>!!g.addrDue&&Date.now()>new Date(g.addrDue+'T23:59:59+09:00').getTime();
+const rcvOf=m=>(m.rcv||m.name||'');
+const isAdminView=()=>!personal&&!formView;
+const addrDuePast=g=>!isAdminView()&&!!g.addrDue&&Date.now()>new Date(g.addrDue+'T23:59:59+09:00').getTime();
 const dueTxt=d=>{const x=new Date(d+'T12:00:00+09:00');return (x.getMonth()+1)+'/'+x.getDate()+'('+'일월화수목금토'[x.getDay()]+')';};
 const hasAddr=m=>m.delivery==='convenience'?!!m.cvs:!!m.addr;
-const dlvLocked=(g,m)=>!!((g.stage2Open&&hasAddr(m))||(+m.paid2>0));
+const dlvLocked=(g,m)=>!isAdminView()&&!!((g.stage2Open&&hasAddr(m))||(+m.paid2>0));
 const addrText=m=>m.delivery==='convenience'?`${m.cvs||''}`:(m.zip?'['+m.zip+'] ':'')+fullAddr(m);
 const fmtDate=iso=>{const d=new Date(iso);return `${d.getMonth()+1}월 ${d.getDate()}일`;};
 const fmtDT=iso=>{const d=new Date(iso);return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
@@ -809,7 +811,7 @@ function tabs(list,cur,key){return `<div class="tabs" role="tablist">${list.map(
 function logiRow(g,m,i){
   const box=m.box||dom(m).box;
   const item=m.items[0]?(m.items.length>1?`${m.items[0].n.slice(0,6)} 외 ${m.items.length-1}건`:m.items[0].n):'굿즈';
-  return {i:i+1,name:m.name,phone:m.phone.replace(/\D/g,''),zip:m.zip||'',addr:m.addr||'',addr2:m.addr2||'',box,item:item.slice(0,10),price:s1(m),priceMan:Math.max(1,Math.round(s1(m)/10000)),memo:(m.memo||'').replace(/[^가-힣a-zA-Z0-9 ]/g,'').slice(0,30)};
+  return {i:i+1,name:rcvOf(m),phone:m.phone.replace(/\D/g,''),zip:m.zip||'',addr:m.addr||'',addr2:m.addr2||'',box,item:item.slice(0,10),price:s1(m),priceMan:Math.max(1,Math.round(s1(m)/10000)),memo:(m.memo||'').replace(/[^가-힣a-zA-Z0-9 ]/g,'').slice(0,30)};
 }
 
 /* 렌더 */
@@ -978,14 +980,15 @@ function renderMember(g){
           const info=[];
           if(g.addrDue) info.push(past?`⏰ 배송지 수정 기한(${dueTxt(g.addrDue)})이 지났어요.${addrOk?' 바꿔야 하면 '+esc(nickOf(g))+'에게 직접 연락해 주세요.':''}`:`⏰ 배송지는 <b>${dueTxt(g.addrDue)}까지</b> 수정할 수 있어요.`);
           if(lock) info.push(`🔒 배송 방법은 2차 정산 금액에 들어가서 <b>바꿀 수 없어요</b>.`);
-          else if(g.stage2Open) info.push(`⚠️ 저장하면 <b>배송 방법은 바꿀 수 없어요</b> (2차 금액이 정해져요).`);
+          else if(g.stage2Open&&!isAdminView()) info.push(`⚠️ 저장하면 <b>배송 방법은 바꿀 수 없어요</b> (2차 금액이 정해져요).`);
+          if(isAdminView()) info.unshift('🔑 <b>관리자 화면</b>이라 배송 방법·배송지를 기한과 상관없이 고칠 수 있어요. (참여자에게는 잠겨 보여요)');
           return info.length?`<div class="band" style="background:var(--soft);color:var(--ink);margin-bottom:10px;line-height:1.6">${info.join('<br>')}</div>`:'';})()}
-        ${addrOk?`<dl class="kv"><dt>배송 방법</dt><dd>${dpill(m)} ${dom(m).fee.toLocaleString('ko-KR')}원${dlvLocked(g,m)?' 🔒':''}</dd><dt>받는 분</dt><dd><b>${esc(m.name)}</b> · ${esc(m.phone)}</dd>${m.delivery==='convenience'?`<dt>수령 편의점</dt><dd>${esc(m.cvs)}</dd>`:`<dt>주소</dt><dd>${m.zip?'['+esc(m.zip)+'] ':''}${esc(fullAddr(m))}</dd>`}${m.memo?`<dt>요청사항</dt><dd>${esc(m.memo)}</dd>`:''}</dl>
+        ${addrOk?`<dl class="kv"><dt>배송 방법</dt><dd>${dpill(m)} ${dom(m).fee.toLocaleString('ko-KR')}원${dlvLocked(g,m)?' 🔒':''}</dd><dt>받는 분</dt><dd><b>${esc(rcvOf(m))}</b> · ${esc(m.phone)}</dd>${m.delivery==='convenience'?`<dt>수령 편의점</dt><dd>${esc(m.cvs)}</dd>`:`<dt>주소</dt><dd>${m.zip?'['+esc(m.zip)+'] ':''}${esc(fullAddr(m))}</dd>`}${m.memo?`<dt>요청사항</dt><dd>${esc(m.memo)}</dd>`:''}</dl>
           ${addrDuePast(g)?'':`<div class="row end" style="margin-top:8px"><button class="btn s" id="editAddr">배송지 수정</button></div>`}`
         :`<div class="band bad" style="margin-bottom:10px">배송지가 아직 없어요. 입력하면 ${esc(nickOf(g))}에게 바로 전달됩니다.</div>`}
         <form id="addrForm" ${addrOk?'hidden':''}>
           <div class="grid2">
-            <label class="f">받는 분 (실 수령자 성함)<input id="a_name" value="${esc(m.name)}" required></label>
+            <label class="f">받는 분 (실 수령자 성함)<input id="a_name" value="${esc(m.rcv||'')}" placeholder="택배 받을 분 실명" required></label>
             <label class="f">휴대폰 번호<input id="a_phone" value="${esc(m.phone)}" inputmode="tel" placeholder="010-0000-0000" required></label>
           </div>
           ${dlvLocked(g,m)?`<label class="f" style="margin-top:8px">배송 방법 🔒<input value="${m.delivery==='convenience'?'편의점택배 2,500원 (GS25에서 찾기)':'일반택배 4,000원 (집·회사로 받기)'}" disabled><input type="hidden" id="a_delivery" value="${m.delivery==='convenience'?'convenience':'normal'}"></label>`
@@ -1244,6 +1247,7 @@ ${subtabs('status',[{id:'main',t:'현황·진행',c:'yellow'},{id:'close',t:'공
 
     <div ${T!=='members'?'hidden':''} class="panel">
       <div class="card">
+        ${(()=>{const fx=nickFixes(g);return fx.length?`<div class="band bad" style="margin-bottom:10px;line-height:1.6">닉네임 대신 본명으로 바뀐 사람이 <b>${fx.length}명</b> 있어요: ${fx.map(x=>esc(x.m.name)+' → '+esc(x.nick)).join(', ')}<div style="margin-top:8px"><button class="btn s p" id="nickFixGo">닉네임으로 되돌리기 (본명은 '받는 분'으로 옮김)</button></div></div>`:'';})()}
         <div class="row between hd2"><h2 style="margin:0;border:0;padding:0">참여자 ${n}명</h2><span class="row"><button class="btn s" id="formToMembers2">📋 폼에서 가져오기</button><button class="btn s p" id="addM">+ 추가</button></span></div>
         <p class="help" style="margin:4px 0 10px">입금 확인은 입금 탭, 배송지·포장은 배송 탭에서 합니다. 여기서는 누가 무엇을 샀는지와 진행 상태만 봅니다.</p>
         <div class="plist">
@@ -1369,7 +1373,7 @@ ${subtabs('ship',[{id:'pickup',t:'택배 접수',c:'blue'},{id:'track',t:'운송
         <div class="plist">${[...conv].sort((a,b)=>(a.packed?1:0)-(b.packed?1:0)).map(m=>`<div class="prow ${m.packed?'packed':''} ${m.cvs?'':'alert'}"><div class="nm">${esc(m.name)} ${dpill(m)}</div><div class="amt num">${won(s1(m))}</div>
           <ul class="pack">${m.items.map(i=>`<li><span>${esc(i.n)}</span><span class="qty">× ${i.q}</span></li>`).join('')}</ul>
           <div class="tools">
-            <button class="btn s" data-copy="${esc(m.name)}" data-label="성함">성함 ${esc(m.name)}</button>
+            <button class="btn s" data-copy="${esc(rcvOf(m))}" data-label="성함">성함 ${esc(rcvOf(m))}</button>
             <button class="btn s" data-copy="${esc(m.phone)}" data-label="휴대폰">휴대폰 ${esc(m.phone)}</button>
             ${m.cvs?`<button class="btn s" data-copy="${esc(m.cvs)}" data-label="편의점명">편의점 ${esc(m.cvs)}</button>`:'<span class="pill no">편의점 미입력</span>'}
             
@@ -1494,7 +1498,7 @@ function bind(){
   const ad=document.getElementById('a_delivery'); if(ad) ad.onchange=()=>{document.getElementById('a_home').hidden=ad.value!=='normal';document.getElementById('a_cvsbox').hidden=ad.value!=='convenience';};
   const rff=document.getElementById('rfForm'); if(rff&&m) rff.onsubmit=e=>{e.preventDefault();const b=v('rf_bank'),a=v('rf_acct').replace(/[^0-9-]/g,''),h=v('rf_holder');if(!b||!a||!h){toast('은행·계좌번호·예금주를 모두 넣어 주세요');return;}m.refundBank=b;m.refundAcct=a;m.refundHolder=h;m.rfAt=now();pushRefund(m);render();};
   const rfe=document.getElementById('rfEdit'); if(rfe) rfe.onclick=()=>{rfe.parentElement.hidden=true;document.getElementById('rfForm').hidden=false;};
-  const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();if(hasAddr(m)&&addrDuePast(g)){toast('배송지 수정 기한이 지났어요');return;}const nd=dlvLocked(g,m)?m.delivery:v('a_delivery');if(nd!=='normal'&&nd!=='convenience'){toast('배송 방법을 골라 주세요');return;}if(g.stage2Open&&!dlvLocked(g,m)&&!confirm((nd==='convenience'?'편의점택배 2,500원':'일반택배 4,000원')+'으로 정할까요?\n저장하면 배송 방법은 바꿀 수 없어요.'))return;m.name=v('a_name');m.phone=v('a_phone');m.delivery=nd;if(m.delivery==='convenience'){m.cvs=v('a_cvs');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
+  const af=document.getElementById('addrForm'); if(af&&m) af.onsubmit=e=>{e.preventDefault();if(hasAddr(m)&&addrDuePast(g)){toast('배송지 수정 기한이 지났어요');return;}const nd=dlvLocked(g,m)?m.delivery:v('a_delivery');if(nd!=='normal'&&nd!=='convenience'){toast('배송 방법을 골라 주세요');return;}if(!isAdminView()&&g.stage2Open&&!dlvLocked(g,m)&&!confirm((nd==='convenience'?'편의점택배 2,500원':'일반택배 4,000원')+'으로 정할까요?\n저장하면 배송 방법은 바꿀 수 없어요.'))return;m.rcv=v('a_name');m.phone=v('a_phone');m.delivery=nd;if(m.delivery==='convenience'){m.cvs=v('a_cvs');if(!m.cvs){toast('도착 편의점명을 입력해 주세요');return;}}else{m.zip=v('a_zip');m.addr=v('a_addr');m.addr2=v('a_addr2');m.memo=v('a_memo');if(!m.addr){toast('주소를 입력해 주세요');return;}}if(personal){pushMember(m);}else{save();}toast('배송지를 저장했어요');render();};
   app.querySelectorAll('[data-proof]').forEach(op=>op.onclick=()=>openModal(`<div class="row between"><h2 class="t" style="font-size:19px">📎 증빙 서류 (${g.photos.length}장)</h2><button class="btn s" data-close>닫기</button></div>${g.photos.map(p=>`<figure class="pic"><img src="${p.url||p.data}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"><figcaption>${esc(p.name)}</figcaption></figure>`).join('')}<div class="row end" style="margin-top:10px"><button class="btn" data-close>닫기</button></div>`));
   app.querySelectorAll('[data-saveimg]').forEach(si=>si.onclick=async()=>{
     if(typeof html2canvas!=='function'){toast('이미지 변환 도구를 불러오지 못했어요');return;}
@@ -1523,6 +1527,7 @@ function bind(){
   const lu=document.getElementById('limitUSD'); if(lu) lu.onchange=()=>{g.form.limitUSD=+lu.value||0;save();render();};
   const ml=document.getElementById('marginLocal'); if(ml) ml.onchange=()=>{g.form.margin=+String(ml.value).replace(/[^\d.]/g,'')||0;save();render();};
   app.querySelectorAll('input[name=basis]').forEach(r=>r.onchange=()=>{g.form.basis=r.value;save();render();});
+  const nfg=document.getElementById('nickFixGo'); if(nfg) nfg.onclick=()=>{const fx=nickFixes(g); fx.forEach(x=>{ if(!x.m.rcv) x.m.rcv=x.m.name; x.m.name=x.nick; x.m.selfAt=now(); }); save(); render(); toast(fx.length+'명 닉네임을 되돌렸어요');};
   const ftm2=document.getElementById('formToMembers2'); if(ftm2) ftm2.onclick=()=>importFromForm(g);
   const fsv=document.getElementById('formSave'); if(fsv) fsv.onclick=()=>{g.form.deadline=v('formDeadline');g.form.openAt=v('formOpenAt');g.form.welcome=v('formWelcome');g.form.intro=v('formIntro');g.form.store=v('formStore');g.form.itemsText=v('formItems');g.form.priceText=v('formPrice');g.form.extra=v('formExtra');g.form.rules=v('formRules');save();render();toast('저장했어요');};
   const pa=document.getElementById('prodAdd'); if(pa) pa.onclick=()=>{g.form.products.push(blankProduct());save();render();};
@@ -1601,7 +1606,7 @@ function bind(){
   const ls=document.getElementById('logiStatusIn'); if(ls) ls.onchange=async()=>{const f=ls.files[0]; if(!f) return; const out=document.getElementById('logiStatusOut');
     try{ const rows=await readLogiStatus(f); const digits=x=>String(x||'').replace(/\D/g,''); let hit=0; const lines=[];
       rows.forEach(r=>{ const nm=r.name.trim(); const pre=digits(r.phone).slice(0,7);
-        let cands=g.members.filter(m=>m.name.trim()===nm); if(cands.length>1&&pre) cands=cands.filter(m=>digits(m.phone).startsWith(pre)); if(!cands.length&&pre) cands=g.members.filter(m=>digits(m.phone).startsWith(pre)&&digits(m.phone).length>=10);
+        let cands=g.members.filter(m=>m.name.trim()===nm||(m.rcv||'').trim()===nm); if(cands.length>1&&pre) cands=cands.filter(m=>digits(m.phone).startsWith(pre)); if(!cands.length&&pre) cands=g.members.filter(m=>digits(m.phone).startsWith(pre)&&digits(m.phone).length>=10);
         if(cands.length===1){ cands[0].tracking=r.tracking; hit++; lines.push(`<div class="match"><span>${esc(nm)} → ${esc(cands[0].name)}</span><span class="pill ok num">${esc(r.tracking)}</span></div>`); }
         else lines.push(`<div class="match"><span>${esc(nm)} ${esc(r.phone)}</span><span class="pill no">${cands.length?'같은 이름이 여러 명':'참여자 중 없음'} · ${esc(r.tracking)}</span></div>`); });
       save(); render(); const out2=document.getElementById('logiStatusOut'); out2.innerHTML=`<p class="help">${rows.length}건 중 ${hit}명에게 운송장을 넣었어요.</p>`+lines.join(''); toast(`운송장 ${hit}건 입력`);
@@ -1643,6 +1648,11 @@ function showBulk(g,rows){
   out.querySelector('[data-bulkadd]').onclick=()=>{const list=[...out.querySelectorAll('tbody tr')].map(tr=>({name:tr.querySelector('[data-bk=name]').value.trim(),fx:+tr.querySelector('[data-bk=fx]').value||0,maxPer:+tr.querySelector('[data-bk=maxPer]').value||1,cat:tr.querySelector('[data-bk=cat]').value.trim()})).filter(r=>r.name);
     list.forEach(r=>{const p=blankProduct();p.name=r.name;p.fx=r.fx;p.price=r.fx?Math.round(r.fx*g.rate):0;p.maxPer=r.maxPer;p.cat=r.cat;g.form.products.push(p);});V.bulkOpen=null;saveView();save();render();toast(list.length+'개 상품을 추가했어요');};
 }
+/* 배송지 입력 때 닉네임이 본명으로 덮인 사람 찾기: 폼 배정 내역(닉네임별 상품)과 구매 내역이 똑같은 사람 */
+function nickFixes(g){ try{ if(!g.form||!(g.form.responses||[]).length) return []; const {alloc}=allocate(g); const byNick={}; alloc.forEach(a=>{(byNick[a.nick]=byNick[a.nick]||[]).push(a.name+'×'+a.q);});
+  const sig=l=>l.slice().sort().join('|'), msig=m=>sig((m.items||[]).map(i=>i.n+'×'+i.q)); const names=new Set(g.members.map(m=>m.name));
+  const lost=Object.entries(byNick).filter(([n])=>!names.has(n)), strays=g.members.filter(m=>!byNick[m.name]);
+  const out=[]; lost.forEach(([nick,l])=>{const s1=sig(l); if(lost.filter(([,l2])=>sig(l2)===s1).length!==1) return; const c=strays.filter(m=>msig(m)===s1); if(c.length===1) out.push({m:c[0],nick});}); return out; }catch(e){ return []; } }
 function importFromForm(g){const {alloc}=allocate(g);if(!alloc.length)return toast('배정된 신청이 없어요');const byNick={};alloc.forEach(a=>{(byNick[a.nick]=byNick[a.nick]||[]).push(a);});let added=0;
   Object.entries(byNick).forEach(([nick,list])=>{let m=g.members.find(x=>x.name===nick);if(!m){m=blankMember();m.name=nick;g.members.push(m);added++;}m.items=list.map(a=>{const p=g.form.products.find(x=>x.id===a.pid);return {n:a.name,q:a.q,p:p&&p.fx?Math.round(p.fx*g.rate):(a.price||0),fx:p&&p.fx?p.fx:0,fee:p&&p.fee>0?p.fee:0};});});
   distribute(g);save();V.tabA='members';saveView();render();toast(`참여자 ${added}명 추가, ${Object.keys(byNick).length}명 구매 내역 반영`);}
@@ -1678,7 +1688,7 @@ function editMember(g,m,isNew){
   const box=document.createElement('div');box.className='card';box.style.border='2px solid var(--ok-strong)';
   const draw=()=>{box.innerHTML=`
     <h2>${isNew?'참여자 추가':m.name+' 수정'}</h2>
-    <div class="grid2"><label class="f">이름<input id="e_name" value="${esc(m.name)}"></label><label class="f">연락처<input id="e_phone" value="${esc(m.phone)}"></label>
+    <div class="grid2"><label class="f">닉네임 (카페)<input id="e_name" value="${esc(m.name)}"></label><label class="f">받는 분 실명 (택배용)<input id="e_rcv" value="${esc(m.rcv||'')}"></label></div><div class="grid2"><label class="f">연락처<input id="e_phone" value="${esc(m.phone)}"></label>
       <label class="f">우편번호<span class="row" style="gap:6px"><input id="e_zip" value="${esc(m.zip)}" style="flex:1"><button type="button" class="btn s p" data-postcode="e_zip,e_addr,e_addr2" style="white-space:nowrap">🔍 검색</button></span></label><label class="f">국내 배송<select id="e_dlv"><option value="normal" ${m.delivery!=='convenience'?'selected':''}>일반택배 4,000</option><option value="convenience" ${m.delivery==='convenience'?'selected':''}>편의점택배 2,500</option></select></label></div>
     <label class="f" style="margin-top:8px">주소<input id="e_addr" value="${esc(m.addr)}" placeholder="비워 두면 참여자가 직접 입력"></label>
     <div class="grid2" style="margin-top:8px"><label class="f">상세주소<input id="e_addr2" value="${esc(m.addr2)}"></label><label class="f">장바구니<select id="e_cart">${g.carts.map((c,ci)=>`<option value="${ci}" ${(m.cart||0)===ci?'selected':''}>${ci+1}번 장바구니</option>`).join('')}</select></label><label class="f">로지아이 박스타입<select id="e_box"><option value="">자동 (${dom(m).box})</option>${'XSABCDEF'.split('').map(b=>`<option ${m.box===b?'selected':''}>${b}</option>`).join('')}</select></label></div>
@@ -1693,7 +1703,7 @@ function editMember(g,m,isNew){
     <div class="items">${(m.extra2||[]).map((i,k)=>`<div class="it"><input data-x="${k}" data-f="n" value="${esc(i.n)}" placeholder="상품명을 입력하세요"><input data-x="${k}" data-f="q" inputmode="numeric" value="${i.q}"><input data-x="${k}" data-f="fx" inputmode="decimal" value="${i.fx||''}" placeholder="${sym1(g)}현지가"><input data-x="${k}" data-f="p" inputmode="numeric" value="${i.p}" placeholder="원화" ${i.fx?'readonly style="background:var(--soft)"':''}><input data-x="${k}" data-f="fee" inputmode="numeric" value="${i.fee||''}" placeholder="수고비"><button class="x" data-xrm="${k}">×</button></div>`).join('')}</div>
     <div class="row" style="margin-top:8px"><button class="btn s" id="e_xadd">+ 2차 추가 상품</button><span class="muted" style="font-size:13px">추가 상품 합계 <b class="num" id="e_x2">${won(ex2Sum(m))}</b></span></div>
     <div class="row end" style="margin-top:10px"><button class="btn s" id="e_cancel">닫기</button><button class="btn p" id="e_save">저장</button></div>`;
-    const pull=()=>{m.name=box.querySelector('#e_name').value.trim();m.phone=box.querySelector('#e_phone').value.trim();m.zip=box.querySelector('#e_zip').value.trim();m.delivery=box.querySelector('#e_dlv').value;m.addr=box.querySelector('#e_addr').value.trim();m.addr2=box.querySelector('#e_addr2').value.trim();m.box=box.querySelector('#e_box').value;m.cart=+box.querySelector('#e_cart').value||0;m.memo=box.querySelector('#e_memo').value.trim();m.cvs=box.querySelector('#e_cvs').value.trim();
+    const pull=()=>{m.name=box.querySelector('#e_name').value.trim();m.rcv=box.querySelector('#e_rcv').value.trim();m.phone=box.querySelector('#e_phone').value.trim();m.zip=box.querySelector('#e_zip').value.trim();m.delivery=box.querySelector('#e_dlv').value;m.addr=box.querySelector('#e_addr').value.trim();m.addr2=box.querySelector('#e_addr2').value.trim();m.box=box.querySelector('#e_box').value;m.cart=+box.querySelector('#e_cart').value||0;m.memo=box.querySelector('#e_memo').value.trim();m.cvs=box.querySelector('#e_cvs').value.trim();
       box.querySelectorAll('.it input[data-k]').forEach(i=>{const it=m.items[+i.dataset.k];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.items.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});
       m.extra2=m.extra2||[]; box.querySelectorAll('.it input[data-x]').forEach(i=>{const it=m.extra2[+i.dataset.x];if(i.dataset.f==='n')it.n=i.value.trim();else it[i.dataset.f]=+i.value||0;});m.extra2.forEach(it=>{if(it.fx)it.p=Math.round(it.fx*g.rate);});};
     /* 입력칸을 옮겨 다녀도 화면을 다시 그리지 않음(폰 키보드 안 닫힘) — 원화·합계만 바로 갱신 */
@@ -2118,7 +2128,7 @@ setInterval(()=>{ if(formView){const g=S.groups.find(x=>x.id===formView); if(g&&
 let wasWaiting=null; setInterval(()=>{ const g=G(); if(!g) return; const w=formWaiting(g); if(wasWaiting===true&&w===false) render(); wasWaiting=w; },5000);
 function pushRefund(m){ if(!canFetch()){save();toast('저장했어요');return;} try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({member:m.id,refundBank:m.refundBank,refundAcct:m.refundAcct,refundHolder:m.refundHolder})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('전달 실패: '+j.error);else if(!j||!j.v)toast('전달은 됐지만 공구장 쪽 업데이트가 필요해요. 공구장에게 계좌를 직접 알려 주세요');else toast('환불 계좌가 전달됐어요');}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
 /* 관리자: 시트에서 참여자가 직접 넣은 값(배송지·환불 계좌)만 가져와 합치기 — 다른 내 작업은 건드리지 않음 */
-const SELF_F=['name','phone','zip','addr','addr2','memo','cvs','cvsAddr','delivery','selfAt'], RF_F=['refundBank','refundAcct','refundHolder','rfAt'];
+const SELF_F=['rcv','phone','zip','addr','addr2','memo','cvs','cvsAddr','delivery','selfAt'], RF_F=['refundBank','refundAcct','refundHolder','rfAt'];
 async function pullSelfFields(manual){ if(!canFetch()||!V.adminKey) { if(manual) toast('구글 시트 연동이 필요해요'); return; }
   try{ const r=await fetch(S.seller.syncUrl+'?key='+encodeURIComponent(V.adminKey)); const j=await r.json(); if(!j||!j.groups){ if(manual) toast('불러오기 실패'); return; }
     let n=0; j.groups.forEach(rg=>{const lg=S.groups.find(x=>x.id===rg.id); if(!lg) return; (rg.members||[]).forEach(rm=>{const lm=lg.members.find(x=>x.id===rm.id); if(!lm) return;
@@ -2126,7 +2136,7 @@ async function pullSelfFields(manual){ if(!canFetch()||!V.adminKey) { if(manual)
       if((rm.rfAt||'')>(lm.rfAt||'')){RF_F.forEach(k=>{if(rm[k]!==undefined)lm[k]=rm[k];});n++;} });});
     try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} render(); if(manual) toast(n?'새로 들어온 내용 '+n+'건을 불러왔어요':'새로 들어온 내용이 없어요');
   }catch(e){ if(manual) toast('불러오기 실패'); } }
-function pushMember(m){ if(!canFetch()){save();return;} try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({member:m.id,name:m.name,phone:m.phone,zip:m.zip,addr:m.addr,addr2:m.addr2,memo:m.memo,delivery:m.delivery,cvs:m.cvs,cvsAddr:m.cvsAddr})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('전달 실패: '+j.error);else toast('배송지가 전달됐어요');}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
+function pushMember(m){ if(!canFetch()){save();return;} try{fetch(S.seller.syncUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({member:m.id,rcv:m.rcv||'',phone:m.phone,zip:m.zip,addr:m.addr,addr2:m.addr2,memo:m.memo,delivery:m.delivery,cvs:m.cvs,cvsAddr:m.cvsAddr})}).then(r=>r.json()).then(j=>{if(j&&j.error)toast('전달 실패: '+j.error);else toast('배송지가 전달됐어요');}).catch(()=>toast('전달 실패. 다시 시도해 주세요'));}catch(e){} }
 var LOADING=false, LOADFAIL=false;
 const CK=()=>'gongu-cache-'+(formView?'f-'+formView:'p-'+personal);
 function applyForm(j){ S.groups=[Object.assign(blankGroup(''),j.group,{members:[]})]; S.groups[0].form=Object.assign(blankForm(),j.group.form); V.gid=j.group.id; }
@@ -2187,7 +2197,7 @@ document.addEventListener('click',()=>setTimeout(fitAll,30),true);
 document.addEventListener('touchmove',e=>{ if(e.touches.length>1||(e.scale&&e.scale!==1)) e.preventDefault(); },{passive:false});
 
 /* 새 버전 자동 반영: 폰·깃허브가 예전 파일을 기억하고 있으면 최신 파일로 한 번 새로고침 */
-(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑨';
+(function(){ if(!/^https?:/.test(location.protocol)) return; const MY='버전 11.25-⑪';
   fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{ const m=t.match(/버전 [0-9.]+-[①-⑳]/); const ord=v=>{const x=v.match(/([0-9]+)\.([0-9]+)-(.)/);return x?(+x[1])*10000+(+x[2])*100+('①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳'.indexOf(x[3])+1):0;}; if(!m||ord(m[0])<=ord(MY)) return;
     const k='gongu-verjump-'+m[0]; try{ if(sessionStorage.getItem(k)) return; sessionStorage.setItem(k,'1'); }catch(e){}
     location.replace(location.pathname+'?v='+Date.now()+location.hash); }).catch(()=>{}); })();
